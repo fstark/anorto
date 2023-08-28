@@ -9,13 +9,14 @@ l0000h:
 	jp l0865h		;0006	c3 65 08 	. e . 
 	jp l0abah		;0009	c3 ba 0a 	. . . 
 	jp l090eh		;000c	c3 0e 09 	. . . 
-l000fh:
-	dec de			;000f	1b 	. 
-	ld c,d			;0010	4a 	J 
+WELCOME_MSG:
+;	dec de			;000f	1b 	. 
+;	ld c,d			;0010	4a 	J 
+db 01bh, 'J'. ; ESC-J 
     db 'OTRONA ATTACHE'
-	dec c			;001f	0d 	. 
-l0020h:
-	adc a,d			;0020	8a 	. 
+  db 00dh, 08ah
+; 	dec c			;001f	0d 	. 
+;	adc a,d			;0020	8a 	. 
 
         ;   BOOT, we init the hardware
 BOOT:
@@ -156,7 +157,7 @@ l00f0h:
 	ld i,a		;00f2	ed 47 	. G 
 	im 2		;00f4	ed 5e 	. ^ 
 	ei			;00f6	fb 	. 
-	ld hl,l000fh		;00f7	21 0f 00 	! . . 
+	ld hl,WELCOME_MSG		;00f7	21 0f 00 	! . . 
 	ld iy,l0101h		;00fa	fd 21 01 01 	. ! . . 
 	jp l072ch		;00fe	c3 2c 07 	. , . 
 l0101h:
@@ -1095,7 +1096,7 @@ l0714h:
 	jp (ix)		;0728	dd e9 	. . 
 sub_072ah:
 	pop iy		;072a	fd e1 	. . 
-l072ch:
+l072ch: ; print hl... ?
 	ld c,(hl)			;072c	4e 	N 
 	ld b,c			;072d	41 	A 
 	res 7,c		;072e	cb b9 	. . 
