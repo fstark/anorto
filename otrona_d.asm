@@ -40,6 +40,7 @@ LOOP_IODATA:
 
         ;   Now we test if the CPU works well (this sounds quite strange)
 
+    ;   Test the registers by passing all 1s and all0s across all of them
 REGTEST:	ld a,%11111111
 	scf			        ; carry set
 	ld i,a		        ; pass value throught i
@@ -73,11 +74,10 @@ BOOT_FAILED:
 
 OTHER_TEST:
 	jr nz,BOOT_FAILED	; Second time, a should be zero
-
-
 	or a			    ; Test that "or 0" is 0.
 	jr nz,BOOT_FAILED
 
+    ;   Test the ix, iy, sp registers and dual byte additions/flags
                         ; note: all registers are 0
 	ld ix,$ffff		    ;
 	ld sp,ix		    ; 
@@ -105,37 +105,32 @@ OTHER_TEST:
 	xor l			    ; $ff^$ff = $00
 	jr nz,BOOT_FAILED	; if we did not land on zero, something wrong
 
-
+    ;   Test basic flags behavior
 	ld a,$40
 	add a,a
 	jr z,BOOT_FAILED	; $80 is not 0
 	jr c,BOOT_FAILED	; $40+$40 does not create carry 
-
 	jp p,BOOT_FAILED	; $80 is -128, so if positive, failed
-
-
 	jp po,BOOT_FAILED	; not overflow is tested (parity and overflow shares a flag)
-
 	add a,a			    ; $80+$80 = $00
-
 	jr nz,BOOT_FAILED	; Not zero? Fail
 	jr nc,BOOT_FAILED	; If no carry, fail
 	jp m,BOOT_FAILED	; If negative, fail
-
 	or 1		        ; aka or a
 	jp pe,BOOT_FAILED	; parity is even? Fail
 
+    ;   Test decimal adjustment instruction
 	ld a,9 
 	add a,1
 	daa                 ; decimal 10 adjusted to decimal
 	cp 010h		        ; is hex 10
 	jr nz,BOOT_FAILED	; or Fail
-
 	sbc a,001h		    ; Carry was set to zero by daa, a is $f
 	daa			        ; hex f adjusted is 9 
 	cp 9
 	jr nz,BOOT_FAILED	; not 9? Fail
 
+    ;   (unsure)
 	ld sp,STACK_BASE	; Initial stack
 	ld hl,l0f53h		;00ae	21 53 0f 	! S . 
 	ld ix,CONT		;00b1	dd 21 b8 00 	. ! . . 
