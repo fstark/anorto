@@ -3,20 +3,21 @@
 
 	org	00000h
 
+    ;   The stack
+STACK_BASE: equ $fe00
+
+
 l0000h:
-	jp BOOT		;0000	c3 21 00 	. ! . 
+	jp BOOT         ; Called at boot
 	jp l062fh		;0003	c3 2f 06 	. / . 
 	jp l0865h		;0006	c3 65 08 	. e . 
 	jp l0abah		;0009	c3 ba 0a 	. . . 
 	jp l090eh		;000c	c3 0e 09 	. . . 
+
 WELCOME_MSG:
-;	dec de			;000f	1b 	. 
-;	ld c,d			;0010	4a 	J 
-db 01bh, 'J'. ; ESC-J 
+	db $1b, 'J'    ; ESC-J 
     db 'OTRONA ATTACHE'
-  db 00dh, 08ah
-; 	dec c			;001f	0d 	. 
-;	adc a,d			;0020	8a 	. 
+    db $d, $8a
 
         ;   BOOT, we init the hardware
 BOOT:
@@ -37,90 +38,110 @@ LOOP_IODATA:
 	djnz LOOP_IODATA	; Still bytes for this register? 
 	jr LOOP_IOREG		; Go to next register
 
-        ;   Now we test the CPU registers
+        ;   Now we test if the CPU works well (this sounds quite strange)
 
-REGTEST:	ld a,0ffh		;0035	3e ff 	> . 
-	scf			;0037	37 	7 
-	ld i,a		;0038	ed 47 	. G 
-	ld a,i		;003a	ed 57 	. W 
-l003ch:
-	ld b,a			;003c	47 	G 
-	ld c,b			;003d	48 	H 
-	ld d,c			;003e	51 	Q 
-	ld e,d			;003f	5a 	Z 
-l0040h:
-	ld l,e			;0040	6b 	k 
-	ld h,l			;0041	65 	e 
-	ex af,af'			;0042	08 	. 
-	ld a,h			;0043	7c 	| 
-	exx			;0044	d9 	. 
-	ld b,a			;0045	47 	G 
-l0046h:
-	ld c,b			;0046	48 	H 
-	ld d,c			;0047	51 	Q 
-	ld e,d			;0048	5a 	Z 
-	ld l,e			;0049	6b 	k 
-	ld h,l			;004a	65 	e 
-	ex af,af'			;004b	08 	. 
-	ld a,h			;004c	7c 	| 
-	jr nc,l0054h		;004d	30 05 	0 . 
-	cpl			;004f	2f 	/ 
-	and a			;0050	a7 	. 
-	jr z,l003ch		;0051	28 e9 	( . 
-l0053h:
-	halt			;0053	76 	v 
-l0054h:
-	jr nz,l0053h		;0054	20 fd 	  . 
-	or a			;0056	b7 	. 
-	jr nz,l0053h		;0057	20 fa 	  . 
-	ld ix,0ffffh		;0059	dd 21 ff ff 	. ! . . 
-	ld sp,ix		;005d	dd f9 	. . 
-	add hl,sp			;005f	39 	9 
-	ex de,hl			;0060	eb 	. 
-	ld iy,0ffffh		;0061	fd 21 ff ff 	. ! . . 
-	ld sp,iy		;0065	fd f9 	. . 
-	add hl,sp			;0067	39 	9 
-	add hl,de			;0068	19 	. 
-	jr nc,l0053h		;0069	30 e8 	0 . 
-	inc hl			;006b	23 	# 
-	ld ix,l0000h		;006c	dd 21 00 00 	. ! . . 
-	ld sp,ix		;0070	dd f9 	. . 
-	add hl,sp			;0072	39 	9 
-	ex de,hl			;0073	eb 	. 
-	ld iy,l0000h		;0074	fd 21 00 00 	. ! . . 
-	ld sp,iy		;0078	fd f9 	. . 
-	add hl,sp			;007a	39 	9 
-	add hl,de			;007b	19 	. 
-	inc hl			;007c	23 	# 
-	ld a,h			;007d	7c 	| 
-	xor l			;007e	ad 	. 
-	jr nz,l0053h		;007f	20 d2 	  . 
-	ld a,040h		;0081	3e 40 	> @ 
-	add a,a			;0083	87 	. 
-	jr z,l0053h		;0084	28 cd 	( . 
-	jr c,l0053h		;0086	38 cb 	8 . 
-	jp p,l0053h		;0088	f2 53 00 	. S . 
-	jp po,l0053h		;008b	e2 53 00 	. S . 
-	add a,a			;008e	87 	. 
-	jr nz,l0053h		;008f	20 c2 	  . 
-	jr nc,l0053h		;0091	30 c0 	0 . 
-	jp m,l0053h		;0093	fa 53 00 	. S . 
-	or 001h		;0096	f6 01 	. . 
-	jp pe,l0053h		;0098	ea 53 00 	. S . 
-	ld a,009h		;009b	3e 09 	> . 
-	add a,001h		;009d	c6 01 	. . 
-	daa			;009f	27 	' 
-	cp 010h		;00a0	fe 10 	. . 
-	jr nz,l0053h		;00a2	20 af 	  . 
-	sbc a,001h		;00a4	de 01 	. . 
-	daa			;00a6	27 	' 
-	cp 009h		;00a7	fe 09 	. . 
-	jr nz,l0053h		;00a9	20 a8 	  . 
-	ld sp,0fe00h		;00ab	31 00 fe 	1 . . 
+REGTEST:	ld a,%11111111
+	scf			        ; carry set
+	ld i,a		        ; pass value throught i
+	ld a,i		
+PASSVALUE:              ; passes a value (all 1s, then all 0s, through all the registers)
+	ld b,a			    ; pass value through b,c,d,e,l,h
+	ld c,b			
+	ld d,c			 
+	ld e,d			
+	ld l,e			 
+	ld h,l			
+	ex af,af'		    ; value goes to other register bank
+	ld a,h			    ; a contains the passed value
+	exx                 ; now same exercice with the other bank
+	ld b,a			
+	ld c,b			 
+	ld d,c			 
+	ld e,d			 
+	ld l,e			 
+	ld h,l			 
+	ex af,af'		    ; And get the other a to fill, and the carry 
+	ld a,h			    ; and fill it 
+	jr nc,OTHER_TEST		; second loop? (c was 1 first time)
+	cpl			        ; swap 0 and 1
+	and a			    ; test
+	jr z,PASSVALUE		; should be zero, and a is now %00000000
+                        ; carry is not set, so we'll go to OTHER_TEST if everything is good
+
+BOOT_FAILED:
+	halt			    ; We failed to boot
+
+OTHER_TEST:
+	jr nz,BOOT_FAILED	; Second time, a should be zero
+
+
+	or a			    ; Test that "or 0" is 0.
+	jr nz,BOOT_FAILED
+
+                        ; note: all registers are 0
+	ld ix,$ffff		    ;
+	ld sp,ix		    ; 
+	add hl,sp			; hl was 0, so should now be $ffff
+	ex de,hl			; de=$ffff, hl=0
+
+	ld iy,$ffff		    ; same dance with iy
+	ld sp,iy		    ;
+	add hl,sp			; $ffff
+	add hl,de			; $fffe
+	jr nc,BOOT_FAILED	; We clearly had a carry, right?
+
+	inc hl			    ; now $ffff
+	ld ix,0 
+	ld sp,ix 
+	add hl,sp           ; no change 
+	ex de,hl			; de=$ffff, hl=$ffff
+
+	ld iy,0
+    ld sp,iy
+	add hl,sp			; $ffff
+	add hl,de			; $fffe
+	inc hl			    ; $ffff
+	ld a,h			    ; $ff 
+	xor l			    ; $ff^$ff = $00
+	jr nz,BOOT_FAILED	; if we did not land on zero, something wrong
+
+
+	ld a,$40
+	add a,a
+	jr z,BOOT_FAILED	; $80 is not 0
+	jr c,BOOT_FAILED	; $40+$40 does not create carry 
+
+	jp p,BOOT_FAILED	; $80 is -128, so if positive, failed
+
+
+	jp po,BOOT_FAILED	; not overflow is tested (parity and overflow shares a flag)
+
+	add a,a			    ; $80+$80 = $00
+
+	jr nz,BOOT_FAILED	; Not zero? Fail
+	jr nc,BOOT_FAILED	; If no carry, fail
+	jp m,BOOT_FAILED	; If negative, fail
+
+	or 1		        ; aka or a
+	jp pe,BOOT_FAILED	; parity is even? Fail
+
+	ld a,9 
+	add a,1
+	daa                 ; decimal 10 adjusted to decimal
+	cp 010h		        ; is hex 10
+	jr nz,BOOT_FAILED	; or Fail
+
+	sbc a,001h		    ; Carry was set to zero by daa, a is $f
+	daa			        ; hex f adjusted is 9 
+	cp 9
+	jr nz,BOOT_FAILED	; not 9? Fail
+
+	ld sp,STACK_BASE	; Initial stack
 	ld hl,l0f53h		;00ae	21 53 0f 	! S . 
-	ld ix,l00b8h		;00b1	dd 21 b8 00 	. ! . . 
+	ld ix,CONT		;00b1	dd 21 b8 00 	. ! . . 
 	jp l0711h		;00b5	c3 11 07 	. . . 
-l00b8h:
+
+CONT:
 	xor a			;00b8	af 	. 
 	ld i,a		;00b9	ed 47 	. G 
 	ld hl,0fd00h		;00bb	21 00 fd 	! . . 
@@ -159,7 +180,7 @@ l00f0h:
 	ei			;00f6	fb 	. 
 	ld hl,WELCOME_MSG		;00f7	21 0f 00 	! . . 
 	ld iy,l0101h		;00fa	fd 21 01 01 	. ! . . 
-	jp l072ch		;00fe	c3 2c 07 	. , . 
+	jp DISP_HL		;00fe	c3 2c 07 	. , . 
 l0101h:
 	jp l0a1bh		;0101	c3 1b 0a 	. . . 
 l0104h:
@@ -815,7 +836,7 @@ l054dh:
 	ld l,a			;0551	6f 	o 
 l0552h:
 	push hl			;0552	e5 	. 
-	ld hl,0fe00h		;0553	21 00 fe 	! . . 
+	ld hl,STACK_BASE		;0553	21 00 fe 	! . . 
 	ld bc,00200h		;0556	01 00 02 	. . . 
 l0559h:
 	ld (hl),0dbh		;0559	36 db 	6 . 
@@ -854,7 +875,7 @@ l0590h:
 	ld a,(0fd15h)		;059b	3a 15 fd 	: . . 
 	and 0c0h		;059e	e6 c0 	. . 
 	call nz,sub_0913h		;05a0	c4 13 09 	. . . 
-	ld hl,0fe00h		;05a3	21 00 fe 	! . . 
+	ld hl,STACK_BASE		;05a3	21 00 fe 	! . . 
 	ld bc,00200h		;05a6	01 00 02 	. . . 
 l05a9h:
 	ld a,0dbh		;05a9	3e db 	> . 
@@ -929,7 +950,7 @@ l0627h:
 	ld (0fd80h),a		;0629	32 80 fd 	2 . . 
 	ld (0fd81h),a		;062c	32 81 fd 	2 . . 
 l062fh:
-	ld sp,0fe00h		;062f	31 00 fe 	1 . . 
+	ld sp,STACK_BASE		;062f	31 00 fe 	1 . . 
 	jp l0104h		;0632	c3 04 01 	. . . 
 l0635h:
 	sub 030h		;0635	d6 30 	. 0 
@@ -1096,7 +1117,7 @@ l0714h:
 	jp (ix)		;0728	dd e9 	. . 
 sub_072ah:
 	pop iy		;072a	fd e1 	. . 
-l072ch: ; print hl... ?
+DISP_HL: 
 	ld c,(hl)			;072c	4e 	N 
 	ld b,c			;072d	41 	A 
 	res 7,c		;072e	cb b9 	. . 
@@ -1105,7 +1126,7 @@ l072ch: ; print hl... ?
 	jp l07e3h		;0735	c3 e3 07 	. . . 
 l0738h:
 	bit 7,b		;0738	cb 78 	. x 
-	jr z,l072ch		;073a	28 f0 	( . 
+	jr z,DISP_HL		;073a	28 f0 	( . 
 	jp (iy)		;073c	fd e9 	. . 
 	pop ix		;073e	dd e1 	. . 
 l0740h:
@@ -1264,7 +1285,7 @@ l0836h:
 	cp 086h		;0840	fe 86 	. . 
 	jr nz,l0850h		;0842	20 0c 	  . 
 	di			;0844	f3 	. 
-	ld sp,0fe00h		;0845	31 00 fe 	1 . . 
+	ld sp,STACK_BASE		;0845	31 00 fe 	1 . . 
 	xor a			;0848	af 	. 
 	ld (0fd79h),a		;0849	32 79 fd 	2 y . 
 	ei			;084c	fb 	. 
@@ -1497,7 +1518,7 @@ l09c2h:
 	ld h,000h		;09c3	26 00 	& . 
 l09c5h:
 	ex de,hl			;09c5	eb 	. 
-	ld hl,0fe00h		;09c6	21 00 fe 	! . . 
+	ld hl,STACK_BASE		;09c6	21 00 fe 	! . . 
 	ld b,00ah		;09c9	06 0a 	. . 
 l09cbh:
 	ld (hl),d			;09cb	72 	r 
@@ -1566,7 +1587,7 @@ l0a2fh:
 	jr nz,l0a56h		;0a44	20 10 	  . 
 	ld a,(0fe03h)		;0a46	3a 03 fe 	: . . 
 	cp 0a7h		;0a49	fe a7 	. . 
-	jp z,0fe00h		;0a4b	ca 00 fe 	. . . 
+	jp z,STACK_BASE		;0a4b	ca 00 fe 	. . . 
 	ld a,(0fd7bh)		;0a4e	3a 7b fd 	: { . 
 	dec a			;0a51	3d 	= 
 	jr nz,l0a2fh		;0a52	20 db 	  . 
@@ -1588,7 +1609,7 @@ l0a6eh:
 	di			;0a74	f3 	. 
 	xor a			;0a75	af 	. 
 	ld (0fd79h),a		;0a76	32 79 fd 	2 y . 
-	ld sp,0fe00h		;0a79	31 00 fe 	1 . . 
+	ld sp,STACK_BASE		;0a79	31 00 fe 	1 . . 
 	ei			;0a7c	fb 	. 
 	jp l0825h		;0a7d	c3 25 08 	. % . 
 sub_0a80h:
@@ -1913,7 +1934,7 @@ sub_0c7ah:
 	ld a,l			;0c7c	7d 	} 
 	or 0c0h		;0c7d	f6 c0 	. . 
 	ld l,a			;0c7f	6f 	o 
-	ld de,l0020h		;0c80	11 20 00 	.   . 
+	ld de,0020h		;0c80	11 20 00 	.   . 
 	ld bc,04feeh		;0c83	01 ee 4f 	. . O 
 	push bc			;0c86	c5 	. 
 	out (c),l		;0c87	ed 69 	. i 
@@ -1935,7 +1956,7 @@ sub_0c9fh:
 	ld a,l			;0c9f	7d 	} 
 	or 0c0h		;0ca0	f6 c0 	. . 
 	ld l,a			;0ca2	6f 	o 
-	ld de,l0020h		;0ca3	11 20 00 	.   . 
+	ld de,0020h		;0ca3	11 20 00 	.   . 
 	ld b,h			;0ca6	44 	D 
 	ld a,050h		;0ca7	3e 50 	> P 
 l0ca9h:
@@ -2307,7 +2328,7 @@ l0f0ah:
 	add hl,sp			;0f0a	39 	9 
 	nop			;0f0b	00 	. 
 	cp 0ffh		;0f0c	fe ff 	. . 
-	ld bc,l0046h		;0f0e	01 46 00 	. F . 
+	ld bc,0046h		;0f0e	01 46 00 	. F . 
 	nop			;0f11	00 	. 
 	nop			;0f12	00 	. 
 	ld bc,00a02h		;0f13	01 02 0a 	. . . 
@@ -2339,7 +2360,7 @@ l0f1fh:
 	ex af,af'			;0f33	08 	. 
 	inc b			;0f34	04 	. 
 	ld (bc),a			;0f35	02 	. 
-	ld bc,l0040h		;0f36	01 40 00 	. @ . 
+	ld bc,0040h		;0f36	01 40 00 	. @ . 
 	add a,b			;0f39	80 	. 
 	ret nz			;0f3a	c0 	. 
 	nop			;0f3b	00 	. 

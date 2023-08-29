@@ -13,6 +13,7 @@ while true; do
         xxd Otrona_Attaché_U252_Rev_D.BIN > /tmp/a.xxd
         xxd otrona_d.bin > /tmp/b.xxd
         diff /tmp/a.xxd /tmp/b.xxd | head -10
+        diff /tmp/b.xxd /tmp/a.xxd | head -10
     else
         cp otrona_d.asm otrona_d_lastgood.asm
     fi
