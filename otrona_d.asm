@@ -328,7 +328,7 @@ l0205h:
 	jr nz,l0241h		;0207	20 38 	  8
 	ld c,01eh		;0209	0e 1e 	. .
 	call l0abah		;020b	cd ba 0a 	. . .
-	ld de,0087fh		;020e	11 7f 08 	.  .
+	ld de,0087fh		;020e	11 7f 08 	.  .
 	ld c,02bh		;0211	0e 2b 	. +
 l0213h:
 	call l0abah		;0213	cd ba 0a 	. . .
@@ -1268,7 +1268,7 @@ l0829h:
 	call sub_078eh		;0829	cd 8e 07 	. . .
 	jr z,l0836h		;082c	28 08 	( .
 	in a,(0f0h)		;082e	db f0 	. .
-	and 07fh		;0830	e6 7f 	. 
+	and 07fh		;0830	e6 7f 	. 
 	ld c,a			;0832	4f 	O
 	call sub_07e1h		;0833	cd e1 07 	. . .
 l0836h:
@@ -2017,7 +2017,7 @@ l0d07h:
 	rlca			;0d0a	07 	.
 	ccf			;0d0b	3f 	?
 	rr l		;0d0c	cb 1d 	. .
-	ld a,07fh		;0d0e	3e 7f 	> 
+	ld a,07fh		;0d0e	3e 7f 	> 
 	out (0fah),a		;0d10	d3 fa 	. .
 	ld a,0ffh		;0d12	3e ff 	> .
 	out (0fah),a		;0d14	d3 fa 	. .
@@ -2103,7 +2103,7 @@ l0d99h:
 	call sub_0a8fh		;0d9b	cd 8f 0a 	. . .
 	call sub_0aa5h		;0d9e	cd a5 0a 	. . .
 	jr nz,l0dabh		;0da1	20 08 	  .
-	bit 7,a		;0da3	cb 7f 	. 
+	bit 7,a		;0da3	cb 7f 	. 
 	jr z,l0dabh		;0da5	28 04 	( .
 	bit 6,a		;0da7	cb 77 	. w
 	jr z,l0d73h		;0da9	28 c8 	( .
@@ -2363,7 +2363,7 @@ l0ef8h:
 	ld e,h			;0f06	5c 	\
 	ld e,l			;0f07	5d 	]
 	dec l			;0f08	2d 	-
-	ld a,a			;0f09	7f 	
+	ld a,a			;0f09	7f 	
 l0f0ah:
 	add hl,sp			;0f0a	39 	9
 	nop			;0f0b	00 	.
