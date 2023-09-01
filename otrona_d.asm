@@ -68,7 +68,7 @@ STACK_BASE: equ $fe00
 
 
 
-		;	Address 0 jump table
+RESET:
 	jp BOOT         ; Called at boot
 	jp l062fh		;0003	c3 2f 06 	. / .
 	jp l0865h		;0006	c3 65 08 	. e .
@@ -76,9 +76,9 @@ STACK_BASE: equ $fe00
 	jp l090eh		;000c	c3 0e 09 	. . .
 
 WELCOME_MSG:
-	db $1b, 'J'    ; ESC-J
+	db $1b, 'J'    	; ESC-J , probably erase to end of screen
     db 'OTRONA ATTACHE'
-    db $d, $8a
+    db $d, $8a		; CR + LF (with bit 7 for end of string)
 
         ;   BOOT, we init the hardware
 BOOT:
@@ -494,14 +494,17 @@ l02a7h:
 	call sub_07dfh		;02b7	cd df 07 	. . .
 	jr l02a7h		;02ba	18 eb 	. .
 l02bch:
-	cp 04ch		;02bc	fe 4c 	. L
-	jr nz,l02c8h		;02be	20 08 	  .
-	ld a,0ffh		;02c0	3e ff 	> .
+	cp 'L'
+	jr nz,l02c8h
+	; Loop tests
+	ld a,0xff
 	ld (0fd80h),a		;02c2	32 80 fd 	2 . .
 	jp l062fh		;02c5	c3 2f 06 	. / .
 l02c8h:
-	cp 04dh		;02c8	fe 4d 	. M
+	;	Suspicion: this is the memory mapping test 'M'
+	cp 'M'
 	jr nz,l031ah		;02ca	20 4e 	  N
+	; Map Test
 	di			;02cc	f3 	.
 	ld hl,l0f4fh		;02cd	21 4f 0f 	! O .
 	ld ix,l02d7h		;02d0	dd 21 d7 02 	. ! . .
@@ -1154,12 +1157,15 @@ l06f9h:
 	out (DPIOB),a		;070d	d3 fa 	. .
 	pop de			;070f	d1 	.
 	ret			;0710	c9 	.
+
+;	Seems to be loading the virtual data map pointed by HL
+;	Pages are 8K
 l0711h:
-	ld bc,000ffh		;0711	01 ff 00 	. . .
+	ld bc,DMAP		; b = 0, c = DMAP
 l0714h:
-	rld		;0714	ed 6f 	. o
-	out (c),a		;0716	ed 79 	. y
-	ld a,b			;0718	78 	x
+	rld
+	out (c),a
+	ld a,b
 	add a,020h		;0719	c6 20 	.  
 	ld b,a			;071b	47 	G
 	rrd		;071c	ed 67 	. g
@@ -1174,16 +1180,16 @@ l0714h:
 sub_072ah:
 	pop iy		;072a	fd e1 	. .
 DISP_HL:
-	ld c,(hl)			;072c	4e 	N
-	ld b,c			;072d	41 	A
-	res 7,c		;072e	cb b9 	. .
-	inc hl			;0730	23 	#
+	ld c,(hl)
+	ld b,c
+	res 7,c			; clear bit 7
+	inc hl
 	ld ix,l0738h		;0731	dd 21 38 07 	. ! 8 .
-	jp l07e3h		;0735	c3 e3 07 	. . .
+	jp l07e3h
 l0738h:
-	bit 7,b		;0738	cb 78 	. x
-	jr z,DISP_HL		;073a	28 f0 	( .
-	jp (iy)		;073c	fd e9 	. .
+	bit 7,b		;	bit 7 => end of string
+	jr z,DISP_HL
+	jp (iy)
 	pop ix		;073e	dd e1 	. .
 l0740h:
 	ld a,0cfh		;0740	3e cf 	> .
@@ -2428,9 +2434,9 @@ l0f4fh:
 	cp d			;0f51	ba 	.
 	sbc a,b			;0f52	98 	.
 l0f53h:
-	adc a,c			;0f53	89 	.
-	xor e			;0f54	ab 	.
-	call 048efh		;0f55	cd ef 48 	. . H
+		;	Memory map
+	db 0x89,0xab,0xcd,0xef
+	db 0x48 	; . . H
 	ld d,c			;0f58	51 	Q
 	ld d,h			;0f59	54 	T
 	ld c,l			;0f5a	4d 	M
