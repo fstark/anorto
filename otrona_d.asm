@@ -1199,7 +1199,7 @@ l0740h:
 	out (SPIOA),a		;0746	d3 f9 	. .
 	ld a,0e3h		;0748	3e e3 	> .
 	out (DPIOB),a		;074a	d3 fa 	. .
-	ld bc,l0ef8h		;074c	01 f8 0e 	. . .
+	ld bc,00ef8h		;074c	01 f8 0e 	. . .
 l074fh:
 	dec b			;074f	05 	.
 	out (c),b		;0750	ed 41 	. A
@@ -2290,30 +2290,10 @@ IOINITDATA:
 	add a,e			;0e98	83 	.
 	add a,h			;0e99	84 	.
 	db '0123456789:;,=./'
-	nop			;0eaa	00 	.
-	ld bc,00302h		;0eab	01 02 03 	. . .
-	inc b			;0eae	04 	.
-	dec b			;0eaf	05 	.
-	ld b,007h		;0eb0	06 07 	. .
-	ex af,af'			;0eb2	08 	.
-	add hl,bc			;0eb3	09 	.
-	ld a,(bc)			;0eb4	0a 	.
-	dec bc			;0eb5	0b 	.
-	inc c			;0eb6	0c 	.
-	dec c			;0eb7	0d 	.
-	ld c,00fh		;0eb8	0e 0f 	. .
-	djnz l0ecdh		;0eba	10 11 	. .
-	ld (de),a			;0ebc	12 	.
-	inc de			;0ebd	13 	.
-	inc d			;0ebe	14 	.
-	dec d			;0ebf	15 	.
-	ld d,017h		;0ec0	16 17 	. .
-	jr $+27		;0ec2	18 19 	. .
-	ld a,(de)			;0ec4	1a 	.
-	dec de			;0ec5	1b 	.
-	inc e			;0ec6	1c 	.
-	dec e			;0ec7	1d 	.
-	ld e,01fh		;0ec8	1e 1f 	. .
+	db 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07
+	db 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f
+	db 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17
+	db 0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f
 	ex af,af'			;0eca	08 	.
 	add hl,bc			;0ecb	09 	.
 	ld a,(bc)			;0ecc	0a 	.
@@ -2330,48 +2310,7 @@ l0ecdh:
 	add a,d			;0ed7	82 	.
 	add a,e			;0ed8	83 	.
 	add a,h			;0ed9	84 	.
-	jr nc,$+51		;0eda	30 31 	0 1
-	ld (03433h),a		;0edc	32 33 34 	2 3 4
-	dec (hl)			;0edf	35 	5
-	ld (hl),037h		;0ee0	36 37 	6 7
-	jr c,l0f1dh		;0ee2	38 39 	8 9
-	daa			;0ee4	27 	'
-	dec sp			;0ee5	3b 	;
-	inc l			;0ee6	2c 	,
-	dec a			;0ee7	3d 	=
-	ld l,02fh		;0ee8	2e 2f 	. /
-	ld h,b			;0eea	60 	`
-	ld h,c			;0eeb	61 	a
-	ld h,d			;0eec	62 	b
-	ld h,e			;0eed	63 	c
-	ld h,h			;0eee	64 	d
-	ld h,l			;0eef	65 	e
-	ld h,(hl)			;0ef0	66 	f
-	ld h,a			;0ef1	67 	g
-	ld l,b			;0ef2	68 	h
-	ld l,c			;0ef3	69 	i
-	ld l,d			;0ef4	6a 	j
-	ld l,e			;0ef5	6b 	k
-	ld l,h			;0ef6	6c 	l
-	ld l,l			;0ef7	6d 	m
-l0ef8h:
-	ld l,(hl)			;0ef8	6e 	n
-	ld l,a			;0ef9	6f 	o
-	ld (hl),b			;0efa	70 	p
-	ld (hl),c			;0efb	71 	q
-	ld (hl),d			;0efc	72 	r
-	ld (hl),e			;0efd	73 	s
-	ld (hl),h			;0efe	74 	t
-	ld (hl),l			;0eff	75 	u
-	halt			;0f00	76 	v
-	ld (hl),a			;0f01	77 	w
-	ld a,b			;0f02	78 	x
-	ld a,c			;0f03	79 	y
-	ld a,d			;0f04	7a 	z
-	ld e,e			;0f05	5b 	[
-	ld e,h			;0f06	5c 	\
-	ld e,l			;0f07	5d 	]
-	dec l			;0f08	2d 	-
+	db "0123456789';,=./`abcdefghijklmnopqrstuvwxyz[\\]-"
 	ld a,a			;0f09	7f
 l0f0ah:
 	add hl,sp			;0f0a	39 	9
