@@ -63,6 +63,15 @@ DPIOB:	equ 0fah	; PIO PORT B DATA
 			; B7 = /KEYBOARD CLOCK OUT
 SPIOB:	equ 0fbh	;PIO PORT B COMMAND
 SFLPY:	equ 0fch	;FLOPPY COMMAND/STATUS
+			; Bit 0: FDD 0 Busy
+			; Bit 1: FDD 1 Busy
+			; Bit 2: FDD 2 Busy
+			; Bit 3: FDD 3 Busy
+			; Bit 4: FDC Busy
+			; Bit 5: Non-DMA mode
+			; Bit 6: Data Input/Output
+			; Bit 7: Request for Master
+
 DFLPY:	equ 0fdh	;FLOPPY DATA
 DDSPY:	equ 0feh	;DISPLAY DATA
 DMAP:	equ 0ffh	;RAM VIRTUAL MAP DATA
@@ -1435,7 +1444,7 @@ l08cdh:
 	inc hl			;08cd	23 	#
 	ld c,(hl)			;08ce	4e 	N
 	push bc			;08cf	c5 	.
-	call sub_0a8fh		;08d0	cd 8f 0a 	. . .
+	call SEND_FDC_CMD		;08d0	cd 8f 0a 	. . .
 	pop bc			;08d3	c1 	.
 	ld a,001h		;08d4	3e 01 	> .
 	jr nz,l08dch		;08d6	20 04 	  .
@@ -1449,7 +1458,7 @@ l08dch:
 	jr nz,l08f2h		;08e1	20 0f 	  .
 	bit 7,(hl)		;08e3	cb 7e 	. ~
 	ret z			;08e5	c8 	.
-	call sub_0aa5h		;08e6	cd a5 0a 	. . .
+	call READ_FDC_REG		;08e6	cd a5 0a 	. . .
 	ld (0fd1ch),a		;08e9	32 1c fd 	2 . .
 	ld a,002h		;08ec	3e 02 	> .
 	ret nz			;08ee	c0 	.
@@ -1658,7 +1667,7 @@ l0a2fh:
 l0a56h:
 	ld c,008h		;0a56	0e 08 	. .
 	call sub_0a80h		;0a58	cd 80 0a 	. . .
-	call sub_0aa5h		;0a5b	cd a5 0a 	. . .
+	call READ_FDC_REG		;0a5b	cd a5 0a 	. . .
 	ld sp,(0fd7ch)		;0a5e	ed 7b 7c fd 	. { | .
 	ld a,(0fd7bh)		;0a62	3a 7b fd 	: { .
 	dec a			;0a65	3d 	=
@@ -1679,44 +1688,53 @@ sub_0a80h:
 	ld b,00ah		;0a80	06 0a 	. .
 l0a82h:
 	push bc			;0a82	c5 	.
-	call sub_0aa5h		;0a83	cd a5 0a 	. . .
+	call READ_FDC_REG		;0a83	cd a5 0a 	. . .
 	pop bc			;0a86	c1 	.
 	djnz l0a82h		;0a87	10 f9 	. .
-	call sub_0a8fh		;0a89	cd 8f 0a 	. . .
-	jp sub_0aa5h		;0a8c	c3 a5 0a 	. . .
-sub_0a8fh:
-	ld b,01fh		;0a8f	06 1f 	. .
+	call SEND_FDC_CMD		;0a89	cd 8f 0a 	. . .
+	jp READ_FDC_REG		;0a8c	c3 a5 0a 	. . .
+
+SEND_FDC_CMD:
+	ld b,01fh
 l0a91h:
-	djnz l0a91h		;0a91	10 fe 	. .
-	ld b,00ah		;0a93	06 0a 	. .
+	djnz l0a91h		; Wait ~100us
+	ld b,00ah		; b = 10, check 10 times
 l0a95h:
-	in a,(0fch)		;0a95	db fc 	. .
-	and 0c0h		;0a97	e6 c0 	. .
-	cp 080h		;0a99	fe 80 	. .
-	jr z,l0aa0h		;0a9b	28 03 	( .
-	djnz l0a95h		;0a9d	10 f6 	. .
-	ret			;0a9f	c9 	.
+	; Wait for FDC to be ready for data register set
+	in a,(SFLPY)		; Read register
+	and 0c0h		; Only check DIO & RQM bits
+	cp 080h			;
+	jr z,l0aa0h		; DIO=0, RQM=1, continue
+	djnz l0a95h		; b=b-1, if b!=0, jump
+	; Stop if not ready after 10 tries
+	ret			; 10 fails, return (PC = (SP+))
 l0aa0h:
-	or a			;0aa0	b7 	.
-	ld a,c			;0aa1	79 	y
-	out (DFLPY),a		;0aa2	d3 fd 	. .
-	ret			;0aa4	c9 	.
-sub_0aa5h:
-	ld b,01fh		;0aa5	06 1f 	. .
+	or a			; success, z = 0 ?
+	ld a,c			;
+	out (DFLPY),a		; c -> FDC
+	ret			;
+
+
+READ_FDC_REG:
+	ld b,01fh
 l0aa7h:
-	djnz l0aa7h		;0aa7	10 fe 	. .
-	ld b,00ah		;0aa9	06 0a 	. .
+	djnz l0aa7h		; Wait ~100us
+	ld b,00ah		; b = 10, check 10 times
 l0aabh:
-	in a,(0fch)		;0aab	db fc 	. .
-	and 0c0h		;0aad	e6 c0 	. .
-	cp 0c0h		;0aaf	fe c0 	. .
-	jr z,l0ab6h		;0ab1	28 03 	( .
-	djnz l0aabh		;0ab3	10 f6 	. .
-	ret			;0ab5	c9 	.
+	; Wait for FDC to be ready for data register read
+	in a,(SFLPY)		; Read register
+	and 0c0h		; Only check DIO & RQM
+	cp 0c0h
+	jr z,l0ab6h		; DQM=1, DIO=1, data ready to be read
+	djnz l0aabh
+	; Stop if not ready after 10 tries
+	ret			; error, z != 0
 l0ab6h:
-	or a			;0ab6	b7 	.
-	in a,(DFLPY)		;0ab7	db fd 	. .
-	ret			;0ab9	c9 	.
+	or a			; success, z = 0
+	in a,(DFLPY)		; a <- data register
+	ret
+
+
 l0abah:
 	push hl			;0aba	e5 	.
 	push de			;0abb	d5 	.
@@ -2153,14 +2171,14 @@ l0d73h:
 	push af			;0d7d	f5 	.
 	ld a,0ffh		;0d7e	3e ff 	> .
 	ld (0fd1eh),a		;0d80	32 1e fd 	2 . .
-	in a,(0fch)		;0d83	db fc 	. .
+	in a,(SFLPY)		;0d83	db fc 	. .
 	and 010h		;0d85	e6 10 	. .
 	jr z,l0d99h		;0d87	28 10 	( .
 	ld hl,0fd15h		;0d89	21 15 fd 	! . .
 	ld b,007h		;0d8c	06 07 	. .
 l0d8eh:
 	push bc			;0d8e	c5 	.
-	call sub_0aa5h		;0d8f	cd a5 0a 	. . .
+	call READ_FDC_REG		;0d8f	cd a5 0a 	. . .
 	ld (hl),a			;0d92	77 	w
 	inc hl			;0d93	23 	#
 	pop bc			;0d94	c1 	.
@@ -2168,8 +2186,8 @@ l0d8eh:
 	jr l0d73h		;0d97	18 da 	. .
 l0d99h:
 	ld c,008h		;0d99	0e 08 	. .
-	call sub_0a8fh		;0d9b	cd 8f 0a 	. . .
-	call sub_0aa5h		;0d9e	cd a5 0a 	. . .
+	call SEND_FDC_CMD
+	call READ_FDC_REG
 	jr nz,l0dabh		;0da1	20 08 	  .
 	bit 7,a		;0da3	cb 7f 	.
 	jr z,l0dabh		;0da5	28 04 	( .
@@ -2177,7 +2195,7 @@ l0d99h:
 	jr z,l0d73h		;0da9	28 c8 	( .
 l0dabh:
 	ld (0fd15h),a		;0dab	32 15 fd 	2 . .
-	call sub_0aa5h		;0dae	cd a5 0a 	. . .
+	call READ_FDC_REG	;0dae	cd a5 0a 	. . .
 	ld (0fd18h),a		;0db1	32 18 fd 	2 . .
 	jr l0d73h		;0db4	18 bd 	. .
 
