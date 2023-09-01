@@ -1768,8 +1768,8 @@ l0abeh:
 l0acbh:
 	ld l,a			;0acb	6f 	o
 	ld a,(ESCSEQ)
-	or a			;0acf	b7 	.
-	jp nz,l0bbfh		;0ad0	c2 bf 0b 	. . .
+	or a
+	jp nz,ESCAPE	; We're in an ESC sequence
 	ld a,c
 	and 0x60		; zero if ascii less than ' '
 	jr z,CONTROL	; Handle control chars
@@ -1884,8 +1884,8 @@ l0b6dh:
 	out (SDSPY),a		;0b6f	d3 ee 	. .
 	out (DDSPY),a		;0b71	d3 fe 	. .
 	ld a,(0fd77h)		;0b73	3a 77 fd 	: w .
-	inc a			;0b76	3c 	<
-	cp 018h		;0b77	fe 18 	. .
+	inc a
+	cp 24
 	jr nz,l0b7ch		;0b79	20 01 	  .
 	xor a			;0b7b	af 	.
 l0b7ch:
@@ -1893,7 +1893,7 @@ l0b7ch:
 	ld a,l			;0b7f	7d 	}
 	inc a			;0b80	3c 	<
 	inc l			;0b81	2c 	,
-	cp 018h		;0b82	fe 18 	. .
+	cp 24
 	jr nz,l0b88h		;0b84	20 02 	  .
 	ld l,000h		;0b86	2e 00 	. .
 l0b88h:
@@ -1924,7 +1924,11 @@ l0bb2h:
 	cp 00ch		;0bb7	fe 0c 	. .
 	jp nz,l0b31h		;0bb9	c2 31 0b 	. 1 .
 	jp l0c08h		;0bbc	c3 08 0c 	. . .
-l0bbfh:
+
+
+; ESC code management
+
+ESCAPE:
 	dec a			;0bbf	3d 	=
 	jp nz,l0c55h		;0bc0	c2 55 0c 	. U .
 	ld a,c			;0bc3	79 	y
@@ -2044,7 +2048,7 @@ sub_0c7ah:
 	ld bc,04feeh		;0c83	01 ee 4f 	. . O
 	push bc			;0c86	c5 	.
 	out (c),l		;0c87	ed 69 	. i
-	ld c,0feh		;0c89	0e fe 	. .
+	ld c,DDSPY
 l0c8bh:
 	out (c),d		;0c8b	ed 51 	. Q
 	djnz l0c8bh		;0c8d	10 fc 	. .
@@ -2052,7 +2056,7 @@ l0c8bh:
 	pop bc			;0c91	c1 	.
 	set 5,l		;0c92	cb ed 	. .
 	out (c),l		;0c94	ed 69 	. i
-	ld c,0feh		;0c96	0e fe 	. .
+	ld c,DDSPY
 l0c98h:
 	out (c),e		;0c98	ed 59 	. Y
 	djnz l0c98h		;0c9a	10 fc 	. .
@@ -2070,12 +2074,12 @@ l0ca9h:
 	cp b			;0cab	b8 	.
 	ret z			;0cac	c8 	.
 	out (c),l		;0cad	ed 69 	. i
-	ld c,0feh		;0caf	0e fe 	. .
+	ld c,DDSPY
 	out (c),d		;0cb1	ed 51 	. Q
-	ld c,0eeh		;0cb3	0e ee 	. .
+	ld c,SDSPY
 	set 5,l		;0cb5	cb ed 	. .
 	out (c),l		;0cb7	ed 69 	. i
-	ld c,0feh		;0cb9	0e fe 	. .
+	ld c,DDSPY
 	out (c),e		;0cbb	ed 59 	. Y
 	res 5,l		;0cbd	cb ad 	. .
 	inc b			;0cbf	04 	.
