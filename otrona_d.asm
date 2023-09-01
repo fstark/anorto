@@ -5,7 +5,7 @@
 
 ; To avoid using stack a lot of code uses ix as the return address
 CALLIX: macro adrs
-		ld ix,$+7
+		ld ix,$+7	; 4 bytes for ld ix, 3 bytes for jp
 		jp adrs
 	endm
 
@@ -1156,12 +1156,12 @@ l06f9h:
 	pop de			;070f	d1 	.
 	ret			;0710	c9 	.
 
-;	Seems loads the virtual data map pointed by HL (4 bytes)
+;	Loads the 4 bytes (8x8k pages) virtual data map pointed by HL
 ;	Pages are 8K. Ram is 16 pages 0000->1111. Logical are 4 pages, 000->111
 ;	Format of command is 'lll0pppp' => logical page lll shows physical pppp
 MAPMEM:
 	ld bc,DMAP		; b = 0, c = DMAP
-.loop:
+MAPMEMLOOP:
 	rld				; High nibble of (HL)
 	out (c),a
 	ld a,b
@@ -1174,7 +1174,7 @@ MAPMEM:
 	ld b,a
 	inc hl
 	or a			; All pages done?
-	jr nz,.loop
+	jr nz,MAPMEMLOOP
 	jp (ix)
 
 sub_072ah: ; Print HL?
