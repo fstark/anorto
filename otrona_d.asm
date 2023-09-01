@@ -68,7 +68,7 @@ STACK_BASE: equ $fe00
 
 
 
-l0000h:
+		;	Address 0 jump table
 	jp BOOT         ; Called at boot
 	jp l062fh		;0003	c3 2f 06 	. / .
 	jp l0865h		;0006	c3 65 08 	. e .
@@ -252,7 +252,7 @@ l0116h:
 	ld ix,l011fh		;0118	dd 21 1f 01 	. ! . .
 	jp l07e3h		;011c	c3 e3 07 	. . .
 l011fh:
-	ld de,l0000h		;011f	11 00 00 	. . .
+	ld de,0		;011f	11 00 00 	. . .
 	ld (0fd86h),de		;0122	ed 53 86 fd 	. S . .
 l0126h:
 	ld h,000h		;0126	26 00 	& .
@@ -507,7 +507,7 @@ l02c8h:
 	ld ix,l02d7h		;02d0	dd 21 d7 02 	. ! . .
 	jp l0711h		;02d4	c3 11 07 	. . .
 l02d7h:
-	ld hl,l0000h		;02d7	21 00 00 	! . .
+	ld hl,0		;02d7	21 00 00 	! . .
 	ld b,007h		;02da	06 07 	. .
 l02dch:
 	ld (hl),b			;02dc	70 	p
@@ -1635,7 +1635,7 @@ l0a2bh:
 l0a2fh:
 	ld (0fd7bh),a		;0a2f	32 7b fd 	2 { .
 	ld ix,l0a56h		;0a32	dd 21 56 0a 	. ! V .
-	ld hl,l0000h+1		;0a36	21 01 00 	! . .
+	ld hl,1		;0a36	21 01 00 	! . .
 	call sub_0997h		;0a39	cd 97 09 	. . .
 	ld hl,l0f84h		;0a3c	21 84 0f 	! . .
 	ld a,(0fd15h)		;0a3f	3a 15 fd 	: . .
@@ -1864,7 +1864,7 @@ l0ba3h:
 	cp 01eh		;0ba3	fe 1e 	. .
 	jr nz,l0bb2h		;0ba5	20 0b 	  .
 l0ba7h:
-	ld hl,l0000h+1		;0ba7	21 01 00 	! . .
+	ld hl,1		;0ba7	21 01 00 	! . .
 	ld (0fd22h),hl		;0baa	22 22 fd 	" " .
 	ld c,008h		;0bad	0e 08 	. .
 	jp l0abeh		;0baf	c3 be 0a 	. . .
