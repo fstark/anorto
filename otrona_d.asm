@@ -78,7 +78,7 @@ RESET:
 WELCOME_MSG:
 	db $1b, 'J'    	; ESC-J , probably erase to end of screen
     db 'OTRONA ATTACHE\r'
-    db $8a			; LF (with bit 7 for end of string)
+	db ('\n')|0x80		; LF (with bit 7 for end of string)
 
 	;   BOOT, we init the hardware
 BOOT:
@@ -2388,13 +2388,13 @@ l0f53h:
 	ld sp,0005ah		;0f63	31 5a 00 	1 Z .
 NODISK_MSG:
 	db "\r\nNO DISK OR DISK NOT READABL"
-	db 0xc5
+	db ('E')|0x80
 NOSYS_MSG:
 	db "\r\nNO SYSTEM ON DIS"
-	db 0xcb
+	db ('K')|0x80
 TERMINAL_MSG:
 	db "\r\nNOW IN TERMINAL MODE\r\n"
-	db 0x8a
+	db ('\n')|0x80
 	nop			;0fb0	00 	.
 	nop			;0fb1	00 	.
 	nop			;0fb2	00 	.
