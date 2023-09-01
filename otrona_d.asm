@@ -2387,69 +2387,14 @@ l0f53h:
 	ld e,d			;0f62	5a 	Z
 	ld sp,0005ah		;0f63	31 5a 00 	1 Z .
 l0f66h:
-	dec c			;0f66	0d 	.
-	ld a,(bc)			;0f67	0a 	.
-	ld c,(hl)			;0f68	4e 	N
-	ld c,a			;0f69	4f 	O
-	jr nz,l0fb0h		;0f6a	20 44 	  D
-	ld c,c			;0f6c	49 	I
-	ld d,e			;0f6d	53 	S
-	ld c,e			;0f6e	4b 	K
-	jr nz,l0fc0h		;0f6f	20 4f 	  O
-	ld d,d			;0f71	52 	R
-	jr nz,l0fb8h		;0f72	20 44 	  D
-	ld c,c			;0f74	49 	I
-	ld d,e			;0f75	53 	S
-	ld c,e			;0f76	4b 	K
-	jr nz,l0fc7h		;0f77	20 4e 	  N
-	ld c,a			;0f79	4f 	O
-	ld d,h			;0f7a	54 	T
-	jr nz,l0fcfh		;0f7b	20 52 	  R
-	ld b,l			;0f7d	45 	E
-	ld b,c			;0f7e	41 	A
-	ld b,h			;0f7f	44 	D
-	ld b,c			;0f80	41 	A
-	ld b,d			;0f81	42 	B
-	ld c,h			;0f82	4c 	L
-	push bc			;0f83	c5 	.
+	db "\r\nNO DISK OR DISK NOT READABL"
+	db 0xc5
 l0f84h:
-	dec c			;0f84	0d 	.
-	ld a,(bc)			;0f85	0a 	.
-	ld c,(hl)			;0f86	4e 	N
-	ld c,a			;0f87	4f 	O
-	jr nz,$+85		;0f88	20 53 	  S
-	ld e,c			;0f8a	59 	Y
-	ld d,e			;0f8b	53 	S
-	ld d,h			;0f8c	54 	T
-	ld b,l			;0f8d	45 	E
-	ld c,l			;0f8e	4d 	M
-	jr nz,l0fe0h		;0f8f	20 4f 	  O
-	ld c,(hl)			;0f91	4e 	N
-	jr nz,l0fd8h		;0f92	20 44 	  D
-	ld c,c			;0f94	49 	I
-	ld d,e			;0f95	53 	S
-	rrc l		;0f96	cb 0d 	. .
-	ld a,(bc)			;0f98	0a 	.
-	ld c,(hl)			;0f99	4e 	N
+	db "\r\nNO SYSTEM ON DIS"
+	db 0xcb
+	db "\r\nN"
 l0f9ah:
-	ld c,a			;0f9a	4f 	O
-	ld d,a			;0f9b	57 	W
-	jr nz,l0fe7h		;0f9c	20 49 	  I
-	ld c,(hl)			;0f9e	4e 	N
-	jr nz,l0ff5h		;0f9f	20 54 	  T
-	ld b,l			;0fa1	45 	E
-	ld d,d			;0fa2	52 	R
-	ld c,l			;0fa3	4d 	M
-	ld c,c			;0fa4	49 	I
-	ld c,(hl)			;0fa5	4e 	N
-	ld b,c			;0fa6	41 	A
-	ld c,h			;0fa7	4c 	L
-	jr nz,l0ff7h		;0fa8	20 4d 	  M
-	ld c,a			;0faa	4f 	O
-	ld b,h			;0fab	44 	D
-	ld b,l			;0fac	45 	E
-	dec c			;0fad	0d 	.
-	ld a,(bc)			;0fae	0a 	.
+	db "OW IN TERMINAL MODE\r\n"
 	adc a,d			;0faf	8a 	.
 l0fb0h:
 	nop			;0fb0	00 	.
