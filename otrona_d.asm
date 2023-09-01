@@ -61,6 +61,9 @@ DFLPY:	equ 0fdh	;FLOPPY DATA
 DDSPY:	equ 0feh	;DISPLAY DATA
 DMAP:	equ 0ffh	;RAM VIRTUAL MAP DATA
 
+; Additional information can be found in mame:
+; https://github.com/mamedev/mame/blob/39b639d058275990289db08a159752d9c4f5d11f/src/mame/skeleton/attache.cpp
+
 ;   The stack
 STACK_BASE: equ $fe00
 
@@ -195,7 +198,7 @@ OTHER_TEST:
 	ld sp,STACK_BASE	; Initial stack
 	ld hl,l0f53h		;00ae	21 53 0f 	! S .
 	ld ix,CONT		;00b1	dd 21 b8 00 	. ! . .
-	jp l0711h		;00b5	c3 11 07 	. . .
+	jp MAPMEM		;00b5	c3 11 07 	. . .
 
 CONT:
 	xor a			;00b8	af 	.
@@ -508,7 +511,7 @@ l02c8h:
 	di			;02cc	f3 	.
 	ld hl,l0f4fh		;02cd	21 4f 0f 	! O .
 	ld ix,l02d7h		;02d0	dd 21 d7 02 	. ! . .
-	jp l0711h		;02d4	c3 11 07 	. . .
+	jp MAPMEM		;02d4	c3 11 07 	. . .
 l02d7h:
 	ld hl,0		;02d7	21 00 00 	! . .
 	ld b,007h		;02da	06 07 	. .
@@ -520,7 +523,7 @@ l02dch:
 	djnz l02dch		;02e1	10 f9 	. .
 	ld hl,l0f53h		;02e3	21 53 0f 	! S .
 	ld ix,l02edh		;02e6	dd 21 ed 02 	. ! . .
-	jp l0711h		;02ea	c3 11 07 	. . .
+	jp MAPMEM		;02ea	c3 11 07 	. . .
 l02edh:
 	ld a,i		;02ed	ed 57 	. W
 	or a			;02ef	b7 	.
@@ -623,7 +626,7 @@ l0385h:
 	ld b,000h		;038e	06 00 	. .
 	add hl,bc			;0390	09 	.
 	ld ix,l0398h		;0391	dd 21 98 03 	. ! . .
-	jp l0711h		;0395	c3 11 07 	. . .
+	jp MAPMEM		;0395	c3 11 07 	. . .
 l0398h:
 	ld a,i		;0398	ed 57 	. W
 	or a			;039a	b7 	.
@@ -714,7 +717,7 @@ l0417h:
 	di			;0417	f3 	.
 	ld hl,l0f53h		;0418	21 53 0f 	! S .
 	ld ix,l0422h		;041b	dd 21 22 04 	. ! " .
-	jp l0711h		;041f	c3 11 07 	. . .
+	jp MAPMEM		;041f	c3 11 07 	. . .
 l0422h:
 	ld a,d			;0422	7a 	z
 	and 003h		;0423	e6 03 	. .
@@ -1158,25 +1161,27 @@ l06f9h:
 	pop de			;070f	d1 	.
 	ret			;0710	c9 	.
 
-;	Seems to be loading the virtual data map pointed by HL
-;	Pages are 8K
-l0711h:
+;	Seems loads the virtual data map pointed by HL (4 bytes)
+;	Pages are 8K. Ram is 16 pages 0000->1111. Logical are 4 pages, 000->111
+;	Format of command is 'lll0pppp' => logical page lll shows physical pppp
+MAPMEM:
 	ld bc,DMAP		; b = 0, c = DMAP
-l0714h:
-	rld
+.loop:
+	rld				; High nibble of (HL)
 	out (c),a
 	ld a,b
-	add a,020h		;0719	c6 20 	.
-	ld b,a			;071b	47 	G
-	rrd		;071c	ed 67 	. g
-	out (c),a		;071e	ed 79 	. y
-	ld a,b			;0720	78 	x
-	add a,020h		;0721	c6 20 	.
-	ld b,a			;0723	47 	G
-	inc hl			;0724	23 	#
-	or a			;0725	b7 	.
-	jr nz,l0714h		;0726	20 ec 	  .
-	jp (ix)		;0728	dd e9 	. .
+	add a,0x20		; Next logical page
+	ld b,a
+	rrd				; Low nibble of (HL)
+	out (c),a
+	ld a,b
+	add a,0x20		; Next logical page
+	ld b,a
+	inc hl
+	or a			; All pages done?
+	jr nz,.loop
+	jp (ix)
+
 sub_072ah: ; Print HL?
 	pop iy		;072a	fd e1 	. .
 DISP_HL:
@@ -2369,12 +2374,11 @@ l0f3fh:
 	ret z			;0f4d	c8 	.
 	rst 28h			;0f4e	ef 	.
 l0f4fh:
-	cp 0dch		;0f4f	fe dc 	. .
-	cp d			;0f51	ba 	.
-	sbc a,b			;0f52	98 	.
+		;	Memory map
+	db 0xfe, 0xdc, 0xba, 0x98
 l0f53h:
 		;	Memory map
-	db 0x89,0xab,0xcd,0xef
+	db 0x89, 0xab, 0xcd, 0xef
 	db 0x48 	; . . H
 	ld d,c			;0f58	51 	Q
 	ld d,h			;0f59	54 	T
