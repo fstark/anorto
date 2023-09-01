@@ -3,8 +3,69 @@
 
 	org	00000h
 
-    ;   The stack
+; I/O ports, see technical manual page 3-28 (table 3-13)
+FPYBCA: equ 0e0h	; FLOPPY STATUS PORT
+FPYBWR:	equ 0e1h	; FLOPPY DATA PORT
+DSPBCA:	equ 0e2h	; DISPLAY BASE & CURRENT ADDRESS
+DSPBWR:	equ 0e3h	; DISPLAY BASE & WORD COUNT
+STDBCA:	equ 0e4h	; STD BUS BASE & CURRENT ADDRESS
+STDBWR:	equ 0e5h	; STD BUS BASE & WORD COUNT
+SIOBCA:	equ 0e6h	; SIO BASE & CURRENT ADDRESS
+SIOBWR:	equ 0e7h	; SIO BASE & WORD COUNT
+DMACSR:	equ 0e8h	; DMA COMMAND/STATUS REGISTER
+DMAWRR:	equ 0e9h	; DMA WRITE REQUEST REGISTER
+DMAWSM:	equ 0eah	; DMA WRITE SINGLE MASK BIT
+DMAWMR:	equ 0ebh	; DMA WRITE MODE REGISTER
+DMACBP:	equ 0ech	; DMA CLEAR BYTE FLIP-FLOP
+DMATMP:	equ 0edh	; DMA TEMP REG & MASTER CLEAR
+SDSPY:	equ 0eeh	; DISPLAY COMMAND/STATUS
+DMAWAM:	equ 0efh	; DMAWRITE ALL MASK REG BITS
+DCOMM:	equ 0f0h	; COMM PORT DATA
+SCOMM:	equ 0f1h	; COMM PORT STATUS
+DPRTR:	equ 0f2h	; PRINTER PORT DATA
+SPRTR:	equ 0f3h	; PRINTER PORT STATUS
+BAUDC:	equ 0f4h	; BAUD TIMER FOR COMM PORT
+BAUDP:	equ 0f5h	; BAUD TIMER FOR PRINTER PORT
+DSPINT:	equ 0f6h	; DISPLAY INTERRUPr (60HZ)
+FPYINT:	equ 0f7h	; FLOPPY INTERRUPT TIMER
+
+DPIOA:	equ 0f8h	; PIO PORT A DATA
+			; AO-7  = LATCH DATA OUT:
+			; LO= MOTOR ON
+			; L1= GRAPHICS ENABLE
+			; L2= /EPROM ENABLE
+			; L3-7  = DISPLAY BRIGHTNESS
+			; AO-7  = 8910 DATA I/O:
+			; AO-3  = 5832 DO-3 I/O
+			; A4-7  = 5832 AO-3 OUT
+			; AO-3  = 5101 DO-3 I/O
+			; A4-7  = 5101 AO-3 OUT
+SPIOA:	equ 0f9h	; PIO PORT A COMMAND
+DPIOB:	equ 0fah	; PIO PORT B DATA
+			; BO-1 = 5101 A4-5
+			; B2-4 = OPERATION SELECT
+			; 0= 8910 ADDR LOAD
+			; 1= 8910 DATA LOAD
+			; 2= 5832 WRITE
+			; 3= 5832 READ
+			; 4= 5101 WRITE
+			; 5 = 5101 READ
+			; 6 = LATCH LOAD
+			; 7 = NO-OP
+			; B5 = /1138 OPERATION STROBE
+			; B6 = /KEYBOARD DATA IN
+			; B7 = /KEYBOARD CLOCK OUT
+SPIOB:	equ 0fbh	;PIO PORT B COMMAND
+SFLPY:	equ 0fch	;FLOPPY COMMAND/STATUS
+DFLPY:	equ 0fdh	;FLOPPY DATA
+DDSPY:	equ 0feh	;DISPLAY DATA
+DMAP:	equ 0ffh	;RAM VIRTUAL MAP DATA
+
+;   The stack
 STACK_BASE: equ $fe00
+
+
+
 
 
 l0000h:
@@ -161,13 +222,13 @@ l00c0h:
 	cp 009h		;00dc	fe 09 	. .
 	jr nz,l00f0h		;00de	20 10 	  .
 	ld a,0a4h		;00e0	3e a4 	> .
-	out (0eeh),a		;00e2	d3 ee 	. .
+	out (SDSPY),a		;00e2	d3 ee 	. .
 	ld a,01dh		;00e4	3e 1d 	> .
-	out (0feh),a		;00e6	d3 fe 	. .
+	out (DDSPY),a		;00e6	d3 fe 	. .
 	ld a,0a5h		;00e8	3e a5 	> .
-	out (0eeh),a		;00ea	d3 ee 	. .
+	out (SDSPY),a		;00ea	d3 ee 	. .
 	ld a,025h		;00ec	3e 25 	> %
-	out (0feh),a		;00ee	d3 fe 	. .
+	out (DDSPY),a		;00ee	d3 fe 	. .
 l00f0h:
 	ld a,00fh		;00f0	3e 0f 	> .
 	ld i,a		;00f2	ed 47 	. G
@@ -239,7 +300,7 @@ l0173h:
 	jp l0790h		;0177	c3 90 07 	. . .
 l017ah:
 	jr z,l0161h		;017a	28 e5 	( .
-	in a,(0f0h)		;017c	db f0 	. .
+	in a,(DCOMM)		;017c	db f0 	. .
 l017eh:
 	bit 6,a		;017e	cb 77 	. w
 	jr z,l0184h		;0180	28 02 	( .
@@ -328,7 +389,7 @@ l0205h:
 	jr nz,l0241h		;0207	20 38 	  8
 	ld c,01eh		;0209	0e 1e 	. .
 	call l0abah		;020b	cd ba 0a 	. . .
-	ld de,0087fh		;020e	11 7f 08 	.  .
+	ld de,0087fh		;020e	11 7f 08 	.  .
 	ld c,02bh		;0211	0e 2b 	. +
 l0213h:
 	call l0abah		;0213	cd ba 0a 	. . .
@@ -342,9 +403,9 @@ l0213h:
 	ld d,0cfh		;0223	16 cf 	. .
 	call sub_06cbh		;0225	cd cb 06 	. . .
 	ld a,088h		;0228	3e 88 	> .
-	out (0fah),a		;022a	d3 fa 	. .
+	out (DPIOB),a		;022a	d3 fa 	. .
 l022ch:
-	in a,(0fah)		;022c	db fa 	. .
+	in a,(DPIOB)		;022c	db fa 	. .
 	bit 6,a		;022e	cb 77 	. w
 	jr z,l022ch		;0230	28 fa 	( .
 	ei			;0232	fb 	.
@@ -363,7 +424,7 @@ l0247h:
 	ld c,0feh		;0247	0e fe 	. .
 	ld d,080h		;0249	16 80 	. .
 	ld a,e			;024b	7b 	{
-	out (0eeh),a		;024c	d3 ee 	. .
+	out (SDSPY),a		;024c	d3 ee 	. .
 	ld b,000h		;024e	06 00 	. .
 l0250h:
 	in h,(c)		;0250	ed 60 	. `
@@ -1053,9 +1114,9 @@ l06d1h:
 	ld a,0cfh		;06d1	3e cf 	> .
 	push de			;06d3	d5 	.
 	di			;06d4	f3 	.
-	out (0f9h),a		;06d5	d3 f9 	. .
+	out (SPIOA),a		;06d5	d3 f9 	. .
 	ld a,e			;06d7	7b 	{
-	out (0f9h),a		;06d8	d3 f9 	. .
+	out (SPIOA),a		;06d8	d3 f9 	. .
 	ld a,d			;06da	7a 	z
 	rlca			;06db	07 	.
 	rlca			;06dc	07 	.
@@ -1064,7 +1125,7 @@ l06d1h:
 	ld d,a			;06df	57 	W
 	and 0f0h		;06e0	e6 f0 	. .
 	or c			;06e2	b1 	.
-	out (0f8h),a		;06e3	d3 f8 	. .
+	out (DPIOA),a		;06e3	d3 f8 	. .
 	ld a,0b0h		;06e5	3e b0 	> .
 	bit 0,e		;06e7	cb 43 	. C
 	jr z,l06edh		;06e9	28 02 	( .
@@ -1081,16 +1142,16 @@ l06f9h:
 	ld a,d			;06fa	7a 	z
 	and 003h		;06fb	e6 03 	. .
 	or c			;06fd	b1 	.
-	out (0fah),a		;06fe	d3 fa 	. .
+	out (DPIOB),a		;06fe	d3 fa 	. .
 	res 5,a		;0700	cb af 	. .
-	out (0fah),a		;0702	d3 fa 	. .
+	out (DPIOB),a		;0702	d3 fa 	. .
 	push af			;0704	f5 	.
-	in a,(0f8h)		;0705	db f8 	. .
+	in a,(DPIOA)		;0705	db f8 	. .
 	and 00fh		;0707	e6 0f 	. .
 	ld c,a			;0709	4f 	O
 	pop af			;070a	f1 	.
 	set 5,a		;070b	cb ef 	. .
-	out (0fah),a		;070d	d3 fa 	. .
+	out (DPIOB),a		;070d	d3 fa 	. .
 	pop de			;070f	d1 	.
 	ret			;0710	c9 	.
 l0711h:
@@ -1127,27 +1188,27 @@ l0738h:
 l0740h:
 	ld a,0cfh		;0740	3e cf 	> .
 	di			;0742	f3 	.
-	out (0f9h),a		;0743	d3 f9 	. .
+	out (SPIOA),a		;0743	d3 f9 	. .
 	xor a			;0745	af 	.
-	out (0f9h),a		;0746	d3 f9 	. .
+	out (SPIOA),a		;0746	d3 f9 	. .
 	ld a,0e3h		;0748	3e e3 	> .
-	out (0fah),a		;074a	d3 fa 	. .
+	out (DPIOB),a		;074a	d3 fa 	. .
 	ld bc,l0ef8h		;074c	01 f8 0e 	. . .
 l074fh:
 	dec b			;074f	05 	.
 	out (c),b		;0750	ed 41 	. A
 	inc b			;0752	04 	.
 	ld a,0c3h		;0753	3e c3 	> .
-	out (0fah),a		;0755	d3 fa 	. .
+	out (DPIOB),a		;0755	d3 fa 	. .
 	ld a,0e3h		;0757	3e e3 	> .
-	out (0fah),a		;0759	d3 fa 	. .
+	out (DPIOB),a		;0759	d3 fa 	. .
 	outi		;075b	ed a3 	. .
 	ld a,0e7h		;075d	3e e7 	> .
-	out (0fah),a		;075f	d3 fa 	. .
+	out (DPIOB),a		;075f	d3 fa 	. .
 	ld a,0c7h		;0761	3e c7 	> .
-	out (0fah),a		;0763	d3 fa 	. .
+	out (DPIOB),a		;0763	d3 fa 	. .
 	ld a,0e7h		;0765	3e e7 	> .
-	out (0fah),a		;0767	d3 fa 	. .
+	out (DPIOB),a		;0767	d3 fa 	. .
 	jr nz,l074fh		;0769	20 e4 	  .
 	jp (ix)		;076b	dd e9 	. .
 sub_076dh:
@@ -1166,15 +1227,15 @@ l0781h:
 	jp l0790h		;0785	c3 90 07 	. . .
 l0788h:
 	jr z,l076fh		;0788	28 e5 	( .
-	in a,(0f0h)		;078a	db f0 	. .
+	in a,(DCOMM)		;078a	db f0 	. .
 l078ch:
 	jp (ix)		;078c	dd e9 	. .
 sub_078eh:
 	pop iy		;078e	fd e1 	. .
 l0790h:
 	ld a,010h		;0790	3e 10 	> .
-	out (0f1h),a		;0792	d3 f1 	. .
-	in a,(0f1h)		;0794	db f1 	. .
+	out (SCOMM),a		;0792	d3 f1 	. .
+	in a,(SCOMM)		;0794	db f1 	. .
 	and 001h		;0796	e6 01 	. .
 	jp (iy)		;0798	fd e9 	. .
 sub_079ah:
@@ -1199,18 +1260,18 @@ sub_07ach:
 	jr z,l07c7h		;07bd	28 08 	( .
 	call sub_078eh		;07bf	cd 8e 07 	. . .
 	jr z,l07c7h		;07c2	28 03 	( .
-	in a,(0f0h)		;07c4	db f0 	. .
+	in a,(DCOMM)		;07c4	db f0 	. .
 	ret			;07c6	c9 	.
 l07c7h:
 	ld a,(0fd85h)		;07c7	3a 85 fd 	: . .
 	bit 4,a		;07ca	cb 67 	. g
 	jr z,sub_07ach		;07cc	28 de 	( .
 	ld a,010h		;07ce	3e 10 	> .
-	out (0f3h),a		;07d0	d3 f3 	. .
-	in a,(0f3h)		;07d2	db f3 	. .
+	out (SPRTR),a		;07d0	d3 f3 	. .
+	in a,(SPRTR)		;07d2	db f3 	. .
 	and 001h		;07d4	e6 01 	. .
 	jr z,sub_07ach		;07d6	28 d4 	( .
-	in a,(0f2h)		;07d8	db f2 	. .
+	in a,(DPRTR)		;07d8	db f2 	. .
 	ret			;07da	c9 	.
 sub_07dbh:
 	pop ix		;07db	dd e1 	. .
@@ -1230,26 +1291,26 @@ l07ebh:
 	jr z,l0801h		;07f0	28 0f 	( .
 l07f2h:
 	ld a,010h		;07f2	3e 10 	> .
-	out (0f3h),a		;07f4	d3 f3 	. .
-	in a,(0f3h)		;07f6	db f3 	. .
+	out (SPRTR),a		;07f4	d3 f3 	. .
+	in a,(SPRTR)		;07f6	db f3 	. .
 	and 024h		;07f8	e6 24 	. $
 	cp 024h		;07fa	fe 24 	. $
 	jr nz,l07f2h		;07fc	20 f4 	  .
 	ld a,c			;07fe	79 	y
-	out (0f2h),a		;07ff	d3 f2 	. .
+	out (DPRTR),a		;07ff	d3 f2 	. .
 l0801h:
 	ld a,(0fd85h)		;0801	3a 85 fd 	: . .
 	bit 0,a		;0804	cb 47 	. G
 	jr z,l0817h		;0806	28 0f 	( .
 l0808h:
 	ld a,010h		;0808	3e 10 	> .
-	out (0f1h),a		;080a	d3 f1 	. .
-	in a,(0f1h)		;080c	db f1 	. .
+	out (SCOMM),a		;080a	d3 f1 	. .
+	in a,(SCOMM)		;080c	db f1 	. .
 	and 024h		;080e	e6 24 	. $
 	cp 024h		;0810	fe 24 	. $
 	jr nz,l0808h		;0812	20 f4 	  .
 	ld a,c			;0814	79 	y
-	out (0f0h),a		;0815	d3 f0 	. .
+	out (DCOMM),a		;0815	d3 f0 	. .
 l0817h:
 	ld a,c			;0817	79 	y
 	jp (ix)		;0818	dd e9 	. .
@@ -1267,8 +1328,8 @@ l0825h:
 l0829h:
 	call sub_078eh		;0829	cd 8e 07 	. . .
 	jr z,l0836h		;082c	28 08 	( .
-	in a,(0f0h)		;082e	db f0 	. .
-	and 07fh		;0830	e6 7f 	. 
+	in a,(DCOMM)		;082e	db f0 	. .
+	and 07fh		;0830	e6 7f 	. 
 	ld c,a			;0832	4f 	O
 	call sub_07e1h		;0833	cd e1 07 	. . .
 l0836h:
@@ -1287,8 +1348,8 @@ l0836h:
 	jp l0104h		;084d	c3 04 01 	. . .
 l0850h:
 	ld a,010h		;0850	3e 10 	> .
-	out (0f1h),a		;0852	d3 f1 	. .
-	in a,(0f1h)		;0854	db f1 	. .
+	out (SCOMM),a		;0852	d3 f1 	. .
+	in a,(SCOMM)		;0854	db f1 	. .
 	and 004h		;0856	e6 04 	. .
 	jr z,l0829h		;0858	28 cf 	( .
 	di			;085a	f3 	.
@@ -1296,7 +1357,7 @@ l0850h:
 	ld (0fd79h),a		;085c	32 79 fd 	2 y .
 	ei			;085f	fb 	.
 	ld a,c			;0860	79 	y
-	out (0f0h),a		;0861	d3 f0 	. .
+	out (DCOMM),a		;0861	d3 f0 	. .
 	jr l0829h		;0863	18 c4 	. .
 l0865h:
 	push hl			;0865	e5 	.
@@ -1310,11 +1371,11 @@ l0865h:
 	push af			;0874	f5 	.
 	ld a,0cfh		;0875	3e cf 	> .
 	di			;0877	f3 	.
-	out (0f9h),a		;0878	d3 f9 	. .
+	out (SPIOA),a		;0878	d3 f9 	. .
 	xor a			;087a	af 	.
-	out (0f9h),a		;087b	d3 f9 	. .
+	out (SPIOA),a		;087b	d3 f9 	. .
 	pop af			;087d	f1 	.
-	out (0f8h),a		;087e	d3 f8 	. .
+	out (DPIOA),a		;087e	d3 f8 	. .
 	out (c),b		;0880	ed 41 	. A
 	res 5,b		;0882	cb a8 	. .
 	out (c),b		;0884	ed 41 	. A
@@ -1342,7 +1403,7 @@ l08a0h:
 	jr z,l08afh		;08ab	28 02 	( .
 	ld a,048h		;08ad	3e 48 	> H
 l08afh:
-	out (0ebh),a		;08af	d3 eb 	. .
+	out (DMAWMR),a		;08af	d3 eb 	. .
 	push hl			;08b1	e5 	.
 	inc hl			;08b2	23 	#
 	ld c,0e0h		;08b3	0e e0 	. .
@@ -1352,7 +1413,7 @@ l08afh:
 	outi		;08bb	ed a3 	. .
 	outi		;08bd	ed a3 	. .
 	ld a,000h		;08bf	3e 00 	> .
-	out (0eah),a		;08c1	d3 ea 	. .
+	out (DMAWSM),a		;08c1	d3 ea 	. .
 	dec hl			;08c3	2b 	+
 	ex de,hl			;08c4	eb 	.
 	pop hl			;08c5	e1 	.
@@ -1631,7 +1692,7 @@ l0a95h:
 l0aa0h:
 	or a			;0aa0	b7 	.
 	ld a,c			;0aa1	79 	y
-	out (0fdh),a		;0aa2	d3 fd 	. .
+	out (DFLPY),a		;0aa2	d3 fd 	. .
 	ret			;0aa4	c9 	.
 sub_0aa5h:
 	ld b,01fh		;0aa5	06 1f 	. .
@@ -1647,7 +1708,7 @@ l0aabh:
 	ret			;0ab5	c9 	.
 l0ab6h:
 	or a			;0ab6	b7 	.
-	in a,(0fdh)		;0ab7	db fd 	. .
+	in a,(DFLPY)		;0ab7	db fd 	. .
 	ret			;0ab9	c9 	.
 l0abah:
 	push hl			;0aba	e5 	.
@@ -1690,12 +1751,12 @@ l0af3h:
 	ld e,a			;0af3	5f 	_
 	ld a,l			;0af4	7d 	}
 	or 0e0h		;0af5	f6 e0 	. .
-	out (0eeh),a		;0af7	d3 ee 	. .
+	out (SDSPY),a		;0af7	d3 ee 	. .
 	ld b,h			;0af9	44 	D
 	ld c,0feh		;0afa	0e fe 	. .
 	out (c),e		;0afc	ed 59 	. Y
 	and 0dfh		;0afe	e6 df 	. .
-	out (0eeh),a		;0b00	d3 ee 	. .
+	out (SDSPY),a		;0b00	d3 ee 	. .
 	and 01fh		;0b02	e6 1f 	. .
 	ld l,a			;0b04	6f 	o
 	ld a,(0fd24h)		;0b05	3a 24 fd 	: $ .
@@ -1715,15 +1776,15 @@ l0b18h:
 	ld (0fd23h),a		;0b19	32 23 fd 	2 # .
 l0b1ch:
 	ld a,0ach		;0b1c	3e ac 	> .
-	out (0eeh),a		;0b1e	d3 ee 	. .
+	out (SDSPY),a		;0b1e	d3 ee 	. .
 	ld a,h			;0b20	7c 	|
 	inc a			;0b21	3c 	<
-	out (0feh),a		;0b22	d3 fe 	. .
+	out (DDSPY),a		;0b22	d3 fe 	. .
 	ld a,0adh		;0b24	3e ad 	> .
-	out (0eeh),a		;0b26	d3 ee 	. .
+	out (SDSPY),a		;0b26	d3 ee 	. .
 	ld a,l			;0b28	7d 	}
 	and 01fh		;0b29	e6 1f 	. .
-	out (0feh),a		;0b2b	d3 fe 	. .
+	out (DDSPY),a		;0b2b	d3 fe 	. .
 l0b2dh:
 	xor a			;0b2d	af 	.
 l0b2eh:
@@ -1770,8 +1831,8 @@ l0b54h:
 	jr l0b1ch		;0b6b	18 af 	. .
 l0b6dh:
 	ld a,0abh		;0b6d	3e ab 	> .
-	out (0eeh),a		;0b6f	d3 ee 	. .
-	out (0feh),a		;0b71	d3 fe 	. .
+	out (SDSPY),a		;0b6f	d3 ee 	. .
+	out (DDSPY),a		;0b71	d3 fe 	. .
 	ld a,(0fd77h)		;0b73	3a 77 fd 	: w .
 	inc a			;0b76	3c 	<
 	cp 018h		;0b77	fe 18 	. .
@@ -2001,7 +2062,7 @@ sub_0cd7h:
 	push de			;0cee	d5 	.
 	push bc			;0cef	c5 	.
 	push af			;0cf0	f5 	.
-	in a,(0fah)		;0cf1	db fa 	. .
+	in a,(DPIOB)		;0cf1	db fa 	. .
 	bit 6,a		;0cf3	cb 77 	. w
 	jr z,l0d49h		;0cf5	28 52 	( R
 	ld hl,l0fd0h		;0cf7	21 d0 0f 	! . .
@@ -2012,15 +2073,15 @@ l0d03h:
 	pop ix		;0d03	dd e1 	. .
 	ld b,009h		;0d05	06 09 	. .
 l0d07h:
-	in a,(0fah)		;0d07	db fa 	. .
+	in a,(DPIOB)		;0d07	db fa 	. .
 	rlca			;0d09	07 	.
 	rlca			;0d0a	07 	.
 	ccf			;0d0b	3f 	?
 	rr l		;0d0c	cb 1d 	. .
-	ld a,07fh		;0d0e	3e 7f 	> 
-	out (0fah),a		;0d10	d3 fa 	. .
+	ld a,07fh		;0d0e	3e 7f 	> 
+	out (DPIOB),a		;0d10	d3 fa 	. .
 	ld a,0ffh		;0d12	3e ff 	> .
-	out (0fah),a		;0d14	d3 fa 	. .
+	out (DPIOB),a		;0d14	d3 fa 	. .
 	djnz l0d07h		;0d16	10 ef 	. .
 	bit 6,l		;0d18	cb 75 	. u
 	jr z,l0d1eh		;0d1a	28 02 	( .
@@ -2055,13 +2116,13 @@ l0d49h:
 	or l			;0d4d	b5 	.
 	jr nz,l0d6fh		;0d4e	20 1f 	  .
 	ld a,0cfh		;0d50	3e cf 	> .
-	out (0f9h),a		;0d52	d3 f9 	. .
+	out (SPIOA),a		;0d52	d3 f9 	. .
 	xor a			;0d54	af 	.
 	ld (0fd1fh),a		;0d55	32 1f fd 	2 . .
-	out (0f9h),a		;0d58	d3 f9 	. .
+	out (SPIOA),a		;0d58	d3 f9 	. .
 	ld a,(0fd82h)		;0d5a	3a 82 fd 	: . .
 	res 0,a		;0d5d	cb 87 	. .
-	out (0f8h),a		;0d5f	d3 f8 	. .
+	out (DPIOA),a		;0d5f	d3 f8 	. .
 	ld bc,0fbfah		;0d61	01 fa fb 	. . .
 	out (c),b		;0d64	ed 41 	. A
 	res 5,b		;0d66	cb a8 	. .
@@ -2103,7 +2164,7 @@ l0d99h:
 	call sub_0a8fh		;0d9b	cd 8f 0a 	. . .
 	call sub_0aa5h		;0d9e	cd a5 0a 	. . .
 	jr nz,l0dabh		;0da1	20 08 	  .
-	bit 7,a		;0da3	cb 7f 	. 
+	bit 7,a		;0da3	cb 7f 	. 
 	jr z,l0dabh		;0da5	28 04 	( .
 	bit 6,a		;0da7	cb 77 	. w
 	jr z,l0d73h		;0da9	28 c8 	( .
@@ -2112,64 +2173,6 @@ l0dabh:
 	call sub_0aa5h		;0dae	cd a5 0a 	. . .
 	ld (0fd18h),a		;0db1	32 18 fd 	2 . .
 	jr l0d73h		;0db4	18 bd 	. .
-
-; I/O ports, see technical manual page 3-28 (table 3-13)
-FPYBCA: equ 0e0h	; FLOPPY STATUS PORT
-FPYBWR:	equ 0e1h	; FLOPPY DATA PORT
-DSPBCA:	equ 0e2h	; DISPLAY BASE & CURRENT ADDRESS
-DSPBWR:	equ 0e3h	; DISPLAY BASE & WORD COUNT
-STDBCA:	equ 0e4h	; STD BUS BASE & CURRENT ADDRESS
-STDBWR:	equ 0e5h	; STD BUS BASE & WORD COUNT
-SIOBCA:	equ 0e6h	; SIO BASE & CURRENT ADDRESS
-SIOBWR:	equ 0e7h	; SIO BASE & WORD COUNT
-DMACSR:	equ 0e8h	; DMA COMMAND/STATUS REGISTER
-DMAWRR:	equ 0e9h	; DMA WRITE REQUEST REGISTER
-DMAWSM:	equ 0eah	; DMA WRITE SINGLE MASK BIT
-DMAWMR:	equ 0ebh	; DMA WRITE MODE REGISTER
-DMACBP:	equ 0ech	; DMA CLEAR BYTE FLIP-FLOP
-DMATMP:	equ 0edh	; DMA TEMP REG & MASTER CLEAR
-SDSPY:	equ 0eeh	; DISPLAY COMMAND/STATUS
-DMAWAM:	equ 0efh	; DMAWRITE ALL MASK REG BITS
-DCOMM:	equ 0f0h	; COMM PORT DATA
-SCOMM:	equ 0f1h	; COMM PORT STATUS
-DPRTR:	equ 0f2h	; PRINTER PORT DATA
-SPRTR:	equ 0f3h	; PRINTER PORT STATUS
-BAUDC:	equ 0f4h	; BAUD TIMER FOR COMM PORT
-BAUDP:	equ 0f5h	; BAUD TIMER FOR PRINTER PORT
-DSPINT:	equ 0f6h	; DISPLAY INTERRUPr (60HZ)
-FPYINT:	equ 0f7h	; FLOPPY INTERRUPT TIMER
-
-DPIOA:	equ 0f8h	; PIO PORT A DATA
-			; AO-7  = LATCH DATA OUT:
-			; LO= MOTOR ON
-			; L1= GRAPHICS ENABLE
-			; L2= /EPROM ENABLE
-			; L3-7  = DISPLAY BRIGHTNESS
-			; AO-7  = 8910 DATA I/O:
-			; AO-3  = 5832 DO-3 I/O
-			; A4-7  = 5832 AO-3 OUT
-			; AO-3  = 5101 DO-3 I/O
-			; A4-7  = 5101 AO-3 OUT
-SPIOA:	equ 0f9h	; PIO PORT A COMMAND
-DPIOB:	equ 0fah	; PIO PORT B DATA
-			; BO-1 = 5101 A4-5
-			; B2-4 = OPERATION SELECT
-			; 0= 8910 ADDR LOAD
-			; 1= 8910 DATA LOAD
-			; 2= 5832 WRITE
-			; 3= 5832 READ
-			; 4= 5101 WRITE
-			; 5 = 5101 READ
-			; 6 = LATCH LOAD
-			; 7 = NO-OP
-			; B5 = /1138 OPERATION STROBE
-			; B6 = /KEYBOARD DATA IN
-			; B7 = /KEYBOARD CLOCK OUT
-SPIOB:	equ 0fbh	;PIO PORT B COMMAND
-SFLPY:	equ 0fch	;FLOPPY COMMAND/STATUS
-DFLPY:	equ 0fdh	;FLOPPY DATA
-DDSPY:	equ 0feh	;DISPLAY DATA
-DMAP:	equ 0ffh	;RAM VIRTUAL MAP DATA
 
 IOINITDATA:
 	; CTRC (TMS9927 = CRT5027) init
@@ -2363,7 +2366,7 @@ l0ef8h:
 	ld e,h			;0f06	5c 	\
 	ld e,l			;0f07	5d 	]
 	dec l			;0f08	2d 	-
-	ld a,a			;0f09	7f 	
+	ld a,a			;0f09	7f 	
 l0f0ah:
 	add hl,sp			;0f0a	39 	9
 	nop			;0f0b	00 	.
