@@ -77,8 +77,8 @@ RESET:
 
 WELCOME_MSG:
 	db $1b, 'J'    	; ESC-J , probably erase to end of screen
-    db 'OTRONA ATTACHE'
-    db $d, $8a		; CR + LF (with bit 7 for end of string)
+    db 'OTRONA ATTACHE\r'
+    db $8a			; LF (with bit 7 for end of string)
 
 	;   BOOT, we init the hardware
 BOOT:
