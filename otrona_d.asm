@@ -69,18 +69,18 @@ STACK_BASE: equ $fe00
 
 
 RESET:
-	jp BOOT         ; Called at boot
+	jp BOOT			; Called at boot
 	jp l062fh		;0003	c3 2f 06 	. / .
 	jp l0865h		;0006	c3 65 08 	. e .
 	jp l0abah		;0009	c3 ba 0a 	. . .
 	jp l090eh		;000c	c3 0e 09 	. . .
 
 WELCOME_MSG:
-	db $1b, 'J'    ; ESC-J , probably erase to end of screen
-    db 'OTRONA ATTACHE'
-    db $d, $8a
+	db $1b, 'J'	; ESC-J , probably erase to end of screen
+	db 'OTRONA ATTACHE'
+	db $d, $8a
 
-        ;   BOOT, we init the hardware
+	;   BOOT, we init the hardware
 BOOT:
 	di
 	ld hl,IOINITDATA	; I/O registers configuration table
@@ -91,107 +91,107 @@ LOOP_IOREG:
 	jr z,REGTEST		; If address is 0xff, we're done
 	inc hl
 	ld b,(hl)			; Read number of bytes to output
-	inc hl			    ;
+	inc hl				;
 LOOP_IODATA:
 	ld a,(hl)			; Byte to output to I/O
-	out (c),a		    ; Output to I/O register
+	out (c),a			; Output to I/O register
 	inc hl
 	djnz LOOP_IODATA	; Still bytes for this register?
 	jr LOOP_IOREG		; Go to next register
 
-        ;   Now we test if the CPU works well (this sounds quite strange)
+	;   Now we test if the CPU works well (this sounds quite strange)
 
-    ;   Test the registers by passing all 1s and all0s across all of them
+	;   Test the registers by passing all 1s and all0s across all of them
 REGTEST:	ld a,%11111111
-	scf			        ; carry set
-	ld i,a		        ; pass value throught i
+	scf				; carry set
+	ld i,a			; pass value throught i
 	ld a,i
-PASSVALUE:              ; passes a value (all 1s, then all 0s, through all the registers)
-	ld b,a			    ; pass value through b,c,d,e,l,h
+PASSVALUE:		  ; passes a value (all 1s, then all 0s, through all the registers)
+	ld b,a				; pass value through b,c,d,e,l,h
 	ld c,b
 	ld d,c
 	ld e,d
 	ld l,e
 	ld h,l
-	ex af,af'		    ; value goes to other register bank
-	ld a,h			    ; a contains the passed value
-	exx                 ; now same exercice with the other bank
+	ex af,af'			; value goes to other register bank
+	ld a,h				; a contains the passed value
+	exx		 ; now same exercice with the other bank
 	ld b,a
 	ld c,b
 	ld d,c
 	ld e,d
 	ld l,e
 	ld h,l
-	ex af,af'		    ; And get the other a to fill, and the carry
-	ld a,h			    ; and fill it
+	ex af,af'			; And get the other a to fill, and the carry
+	ld a,h				; and fill it
 	jr nc,OTHER_TEST		; second loop? (c was 1 first time)
-	cpl			        ; swap 0 and 1
-	and a			    ; test
+	cpl				; swap 0 and 1
+	and a				; test
 	jr z,PASSVALUE		; should be zero, and a is now %00000000
-                        ; carry is not set, so we'll go to OTHER_TEST if everything is good
+			; carry is not set, so we'll go to OTHER_TEST if everything is good
 
 BOOT_FAILED:
-	halt			    ; We failed to boot
+	halt				; We failed to boot
 
 OTHER_TEST:
 	jr nz,BOOT_FAILED	; Second time, a should be zero
-	or a			    ; Test that "or 0" is 0.
+	or a				; Test that "or 0" is 0.
 	jr nz,BOOT_FAILED
 
-    ;   Test the ix, iy, sp registers and dual byte additions/flags
-                        ; note: all registers are 0
-	ld ix,$ffff		    ;
-	ld sp,ix		    ;
+	;   Test the ix, iy, sp registers and dual byte additions/flags
+			; note: all registers are 0
+	ld ix,$ffff			;
+	ld sp,ix			;
 	add hl,sp			; hl was 0, so should now be $ffff
 	ex de,hl			; de=$ffff, hl=0
 
-	ld iy,$ffff		    ; same dance with iy
-	ld sp,iy		    ;
+	ld iy,$ffff			; same dance with iy
+	ld sp,iy			;
 	add hl,sp			; $ffff
 	add hl,de			; $fffe
 	jr nc,BOOT_FAILED	; We clearly had a carry, right?
 
-	inc hl			    ; now $ffff
+	inc hl				; now $ffff
 	ld ix,0
 	ld sp,ix
-	add hl,sp           ; no change
+	add hl,sp	   ; no change
 	ex de,hl			; de=$ffff, hl=$ffff
 
 	ld iy,0
-    ld sp,iy
+	ld sp,iy
 	add hl,sp			; $ffff
 	add hl,de			; $fffe
-	inc hl			    ; $ffff
-	ld a,h			    ; $ff
-	xor l			    ; $ff^$ff = $00
+	inc hl				; $ffff
+	ld a,h				; $ff
+	xor l				; $ff^$ff = $00
 	jr nz,BOOT_FAILED	; if we did not land on zero, something wrong
 
-    ;   Test basic flags behavior
+	;   Test basic flags behavior
 	ld a,$40
 	add a,a
 	jr z,BOOT_FAILED	; $80 is not 0
 	jr c,BOOT_FAILED	; $40+$40 does not create carry
 	jp p,BOOT_FAILED	; $80 is -128, so if positive, failed
 	jp po,BOOT_FAILED	; not overflow is tested (parity and overflow shares a flag)
-	add a,a			    ; $80+$80 = $00
+	add a,a				; $80+$80 = $00
 	jr nz,BOOT_FAILED	; Not zero? Fail
 	jr nc,BOOT_FAILED	; If no carry, fail
 	jp m,BOOT_FAILED	; If negative, fail
-	or 1		        ; aka or a
+	or 1			; aka or a
 	jp pe,BOOT_FAILED	; parity is even? Fail
 
-    ;   Test decimal adjustment instruction
+	;   Test decimal adjustment instruction
 	ld a,9
 	add a,1
-	daa                 ; decimal 10 adjusted to decimal
-	cp 010h		        ; is hex 10
+	daa		 ; decimal 10 adjusted to decimal
+	cp 010h			; is hex 10
 	jr nz,BOOT_FAILED	; or Fail
-	sbc a,001h		    ; Carry was set to zero by daa, a is $f
-	daa			        ; hex f adjusted is 9
+	sbc a,001h			; Carry was set to zero by daa, a is $f
+	daa				; hex f adjusted is 9
 	cp 9
 	jr nz,BOOT_FAILED	; not 9? Fail
 
-    ;   (unsure)
+	;   (unsure)
 	ld sp,STACK_BASE	; Initial stack
 	ld hl,l0f53h		;00ae	21 53 0f 	! S .
 	ld ix,CONT		;00b1	dd 21 b8 00 	. ! . .
