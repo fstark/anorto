@@ -1177,7 +1177,7 @@ l0714h:
 	or a			;0725	b7 	.
 	jr nz,l0714h		;0726	20 ec 	  .
 	jp (ix)		;0728	dd e9 	. .
-sub_072ah:
+sub_072ah: ; Print HL?
 	pop iy		;072a	fd e1 	. .
 DISP_HL:
 	ld c,(hl)			;072c	4e 	N
@@ -1643,7 +1643,7 @@ l0a2fh:
 	ld ix,l0a56h		;0a32	dd 21 56 0a 	. ! V .
 	ld hl,1		;0a36	21 01 00 	! . .
 	call sub_0997h		;0a39	cd 97 09 	. . .
-	ld hl,l0f84h		;0a3c	21 84 0f 	! . .
+	ld hl,NOSYS_MSG		;0a3c	21 84 0f 	! . .
 	ld a,(0fd15h)		;0a3f	3a 15 fd 	: . .
 	and 0c0h		;0a42	e6 c0 	. .
 	jr nz,l0a56h		;0a44	20 10 	  .
@@ -1662,11 +1662,11 @@ l0a56h:
 	ld a,(0fd7bh)		;0a62	3a 7b fd 	: { .
 	dec a			;0a65	3d 	=
 	jr nz,l0a2bh		;0a66	20 c3 	  .
-	ld hl,l0f66h		;0a68	21 66 0f 	! f .
+	ld hl,NODISK_MSG	;0a68	21 66 0f 	! f .
 l0a6bh:
 	call sub_072ah		;0a6b	cd 2a 07 	. * .
 l0a6eh:
-	ld hl,00f97h		;0a6e	21 97 0f 	! . .
+	ld hl,TERMINAL_MSG	;0a6e	21 97 0f 	! . .
 	call sub_072ah		;0a71	cd 2a 07 	. * .
 	di			;0a74	f3 	.
 	xor a			;0a75	af 	.
@@ -2332,7 +2332,7 @@ l0f1fh:
 	inc bc			;0f1f	03 	.
 	inc bc			;0f20	03 	.
 	xor a			;0f21	af 	.
-	djnz l0f9ah		;0f22	10 76 	. v
+	djnz 00f9ah		;0f22	10 76 	. v
 	nop			;0f24	00 	.
 	cp 027h		;0f25	fe 27 	. '
 	nop			;0f27	00 	.
@@ -2386,17 +2386,15 @@ l0f53h:
 	ld d,d			;0f61	52 	R
 	ld e,d			;0f62	5a 	Z
 	ld sp,0005ah		;0f63	31 5a 00 	1 Z .
-l0f66h:
+NODISK_MSG:
 	db "\r\nNO DISK OR DISK NOT READABL"
 	db 0xc5
-l0f84h:
+NOSYS_MSG:
 	db "\r\nNO SYSTEM ON DIS"
 	db 0xcb
-	db "\r\nN"
-l0f9ah:
-	db "OW IN TERMINAL MODE\r\n"
-	adc a,d			;0faf	8a 	.
-l0fb0h:
+TERMINAL_MSG:
+	db "\r\nNOW IN TERMINAL MODE\r\n"
+	db 0x8a
 	nop			;0fb0	00 	.
 	nop			;0fb1	00 	.
 	nop			;0fb2	00 	.
@@ -2405,7 +2403,6 @@ l0fb0h:
 	nop			;0fb5	00 	.
 	nop			;0fb6	00 	.
 	nop			;0fb7	00 	.
-l0fb8h:
 	nop			;0fb8	00 	.
 	nop			;0fb9	00 	.
 	nop			;0fba	00 	.
@@ -2414,7 +2411,6 @@ l0fb8h:
 	nop			;0fbd	00 	.
 	nop			;0fbe	00 	.
 	nop			;0fbf	00 	.
-l0fc0h:
 	nop			;0fc0	00 	.
 	nop			;0fc1	00 	.
 	nop			;0fc2	00 	.
@@ -2422,7 +2418,6 @@ l0fc0h:
 	nop			;0fc4	00 	.
 	nop			;0fc5	00 	.
 	nop			;0fc6	00 	.
-l0fc7h:
 	nop			;0fc7	00 	.
 	nop			;0fc8	00 	.
 	nop			;0fc9	00 	.
@@ -2431,7 +2426,6 @@ l0fc7h:
 	nop			;0fcc	00 	.
 	nop			;0fcd	00 	.
 	nop			;0fce	00 	.
-l0fcfh:
 	nop			;0fcf	00 	.
 l0fd0h:
 	nop			;0fd0	00 	.
@@ -2446,7 +2440,6 @@ l0fd8h:
 	ld b,b			;0fdb	40 	@
 	ld bc,00200h		;0fdc	01 00 02 	. . .
 	ld (de),a			;0fdf	12 	.
-l0fe0h:
 	nop			;0fe0	00 	.
 	rra			;0fe1	1f 	.
 	rra			;0fe2	1f 	.
@@ -2454,7 +2447,6 @@ l0fe0h:
 	jr c,l0fe6h		;0fe4	38 00 	8 .
 l0fe6h:
 	nop			;0fe6	00 	.
-l0fe7h:
 	jr nz,l0fe9h		;0fe7	20 00 	  .
 l0fe9h:
 	ld b,b			;0fe9	40 	@
@@ -2469,10 +2461,8 @@ l0fedh:
 	nop			;0ff2	00 	.
 	nop			;0ff3	00 	.
 	defb 0edh;next byte illegal after ed		;0ff4	ed 	.
-l0ff5h:
 	inc c			;0ff5	0c 	.
 	ld a,d			;0ff6	7a 	z
-l0ff7h:
 	dec c			;0ff7	0d 	.
 	nop			;0ff8	00 	.
 	nop			;0ff9	00 	.
