@@ -11,10 +11,9 @@ while true; do
     if [ -f otrona_d.bin ]; then
         if ! diff -q otrona_d.bin Otrona_Attaché_U252_Rev_D.BIN; then
             echo "ERROR!"
-            xxd Otrona_Attaché_U252_Rev_D.BIN > /tmp/a.xxd
-            xxd otrona_d.bin > /tmp/b.xxd
-            diff /tmp/a.xxd /tmp/b.xxd | head -10
-            # diff /tmp/b.xxd /tmp/a.xxd | head -10
+            hexdump Otrona_Attaché_U252_Rev_D.BIN > /tmp/a.hex
+            hexdump otrona_d.bin > /tmp/b.hex
+            git diff -U0  --no-index --no-prefix --word-diff=plain --word-diff --word-diff-regex=. /tmp/a.hex /tmp/b.hex
         else
             cp otrona_d.asm otrona_d_lastgood.asm
         fi
