@@ -386,12 +386,12 @@ l01f4h:
 	jp l012ah		;01f7	c3 2a 01 	. * .
 l01fah:
 	cp 020h		;01fa	fe 20 	.
-	jr nz,l0205h		;01fc	20 07 	  .
+	jr nz,DIAGNOSTICS		;01fc	20 07 	  .
 	ld (0fd86h),hl		;01fe	22 86 fd 	" . .
 	ex de,hl			;0201	eb 	.
 	jp l0126h		;0202	c3 26 01 	. & .
-l0205h:
-	cp 047h		;0205	fe 47 	. G
+DIAGNOSTICS:
+	cp 'G'          ; Generate Display Pattern
 	jr nz,l0241h		;0207	20 38 	  8
 	ld c,01eh		;0209	0e 1e 	. .
 	call l0abah		;020b	cd ba 0a 	. . .
@@ -423,7 +423,7 @@ l0236h:
 	call sub_061ch		;023c	cd 1c 06 	. . .
 	jr l0236h		;023f	18 f5 	. .
 l0241h:
-	cp 048h		;0241	fe 48 	. H
+	cp 'H'          ; Display RAM test
 	jr nz,l028dh		;0243	20 48 	  H
 	ld e,000h		;0245	1e 00 	. .
 l0247h:
@@ -474,20 +474,20 @@ l0280h:
 	jr nz,l0247h		;0288	20 bd 	  .
 	jp l05f8h		;028a	c3 f8 05 	. . .
 l028dh:
-	cp 049h		;028d	fe 49 	. I
+	cp 'I'          ; Input Test
 	jr nz,l029ah		;028f	20 09 	  .
 	ld c,l			;0291	4d 	M
 	in h,(c)		;0292	ed 60 	. `
 	call sub_0696h		;0294	cd 96 06 	. . .
 	jp l05f8h		;0297	c3 f8 05 	. . .
 l029ah:
-	cp 04ah		;029a	fe 4a 	. J
+	cp 'J'          ; Jump
 	jr nz,l02a3h		;029c	20 05 	  .
 	ld de,l0104h		;029e	11 04 01 	. . .
 	push de			;02a1	d5 	.
 	jp (hl)			;02a2	e9 	.
 l02a3h:
-	cp 04bh		;02a3	fe 4b 	. K
+	cp 'K'          ; Keyboard Test
 	jr nz,l02bch		;02a5	20 15 	  .
 l02a7h:
 	call sub_076dh		;02a7	cd 6d 07 	. m .
@@ -500,15 +500,14 @@ l02a7h:
 	call sub_07dfh		;02b7	cd df 07 	. . .
 	jr l02a7h		;02ba	18 eb 	. .
 l02bch:
-	cp 'L'
+	cp 'L'			; Loop tests
 	jr nz,l02c8h
-	; Loop tests
+	
 	ld a,0xff
 	ld (0fd80h),a		;02c2	32 80 fd 	2 . .
 	jp l062fh		;02c5	c3 2f 06 	. / .
 l02c8h:
-	;	Suspicion: this is the memory mapping test 'M'
-	cp 'M'
+	cp 'M'			;	Memory Map Test
 	jr nz,l031ah		;02ca	20 4e 	  N
 	; Map Test
 	di
@@ -553,22 +552,22 @@ l0310h:
 	jr nz,l02f8h		;0315	20 e1 	  .
 	jp l05f8h		;0317	c3 f8 05 	. . .
 l031ah:
-	cp 04eh		;031a	fe 4e 	. N
+	cp 'N'			; Mystery item. Warm boot?
 	jr nz,l0321h		;031c	20 03 	  .
 	jp l062fh		;031e	c3 2f 06 	. / .
 l0321h:
-	cp 04fh		;0321	fe 4f 	. O
+	cp 'O'			; Output Test
 	jr nz,l032bh		;0323	20 06 	  .
 	ld c,h			;0325	4c 	L
 	out (c),l		;0326	ed 69 	. i
 	jp l05f8h		;0328	c3 f8 05 	. . .
 l032bh:
-	cp 050h		;032b	fe 50 	. P
+	cp 'P'			; Format Diskette
 	jr nz,l0335h		;032d	20 06 	  .
 	call sub_09b5h		;032f	cd b5 09 	. . .
 	jp l062fh		;0332	c3 2f 06 	. / .
 l0335h:
-	cp 051h		;0335	fe 51 	. Q
+	cp 'Q'			; CMOS Memory Test
 	jp nz,l036eh		;0337	c2 6e 03 	. n .
 	ld e,00fh		;033a	1e 0f 	. .
 l033ch:
@@ -604,7 +603,7 @@ l0363h:
 l036bh:
 	jp l05f8h		;036b	c3 f8 05 	. . .
 l036eh:
-	cp 052h		;036e	fe 52 	. R
+	cp 'R'			; Main.Memory Test
 	jp nz,l043bh		;0370	c2 3b 04 	. ; .
 	di			;0373	f3 	.
 	ld a,l			;0374	7d 	}
@@ -729,7 +728,7 @@ l0432h:
 l0438h:
 	jp l05f8h		;0438	c3 f8 05 	. . .
 l043bh:
-	cp 053h		;043b	fe 53 	. S
+	cp 'S'			; Select Output Port
 	jr nz,l0469h		;043d	20 2a 	  *
 	ld a,l			;043f	7d 	}
 	ld (0fd85h),a		;0440	32 85 fd 	2 . .
@@ -758,7 +757,7 @@ sub_0456h:
 	pop hl			;0467	e1 	.
 	ret			;0468	c9 	.
 l0469h:
-	cp 054h		;0469	fe 54 	. T
+	cp 'T'			; Real-Time Clock Test
 	jr nz,l0489h		;046b	20 1c 	  .
 	call sub_065ah		;046d	cd 5a 06 	. Z .
 	call sub_06bbh		;0470	cd bb 06 	. . .
@@ -775,7 +774,7 @@ l0483h:
 	jp z,l0615h		;0483	ca 15 06 	. . .
 	jp l05f8h		;0486	c3 f8 05 	. . .
 l0489h:
-	cp 055h		;0489	fe 55 	. U
+	cp 'U'			; United Tests
 	jr nz,l04cbh		;048b	20 3e 	  >
 	ld a,(0fd80h)		;048d	3a 80 fd 	: . .
 	cp 080h		;0490	fe 80 	. .
@@ -813,7 +812,7 @@ l04c0h:
 	ld (0fd81h),a		;04c5	32 81 fd 	2 . .
 	jp l05f8h		;04c8	c3 f8 05 	. . .
 l04cbh:
-	cp 056h		;04cb	fe 56 	. V
+	cp 'V'				; Read Disk Sector
 	jr nz,l04e1h		;04cd	20 12 	  .
 	ld ix,l090eh		;04cf	dd 21 0e 09 	. ! . .
 	call sub_0997h		;04d3	cd 97 09 	. . .
@@ -823,13 +822,13 @@ l04d6h:
 	call nz,sub_0913h		;04db	c4 13 09 	. . .
 	jp l05f8h		;04de	c3 f8 05 	. . .
 l04e1h:
-	cp 057h		;04e1	fe 57 	. W
+	cp 'W'				; write Disk Sector
 	jr nz,l04eeh		;04e3	20 09 	  .
 	ld ix,l090eh		;04e5	dd 21 0e 09 	. ! . .
 	call sub_09a0h		;04e9	cd a0 09 	. . .
 	jr l04d6h		;04ec	18 e8 	. .
 l04eeh:
-	cp 058h		;04ee	fe 58 	. X
+	cp 'X'				; I/O Port Transmit Test
 	jr nz,l051bh		;04f0	20 29 	  )
 	ld c,00dh		;04f2	0e 0d 	. .
 	call sub_07dbh		;04f4	cd db 07 	. . .
@@ -857,7 +856,7 @@ l04f7h:
 	call sub_07dbh		;0515	cd db 07 	. . .
 	jp l05f8h		;0518	c3 f8 05 	. . .
 l051bh:
-	cp 059h		;051b	fe 59 	. Y
+	cp 'Y'			; I/O Port Receive Test
 	jr nz,l053fh		;051d	20 20
 l051fh:
 	call sub_07ach		;051f	cd ac 07 	. . .
@@ -880,7 +879,7 @@ l0526h:
 	inc hl			;053c	23 	#
 	jr l0526h		;053d	18 e7 	. .
 l053fh:
-	cp 05ah		;053f	fe 5a 	. Z
+	cp 'Z'			; Disk Drive Test
 	jp nz,l0635h		;0541	c2 35 06 	. 5 .
 	call sub_09b5h		;0544	cd b5 09 	. . .
 	xor a			;0547	af 	.
@@ -1009,6 +1008,8 @@ l0627h:
 l062fh:
 	ld sp,STACK_BASE		;062f	31 00 fe 	1 . .
 	jp l0104h		;0632	c3 04 01 	. . .
+
+		; continuation of diagnostic input: unrecognized key
 l0635h:
 	sub 030h		;0635	d6 30 	. 0
 	jr c,l0646h		;0637	38 0d 	8 .
