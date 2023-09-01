@@ -82,20 +82,20 @@ WELCOME_MSG:
 
         ;   BOOT, we init the hardware
 BOOT:
-	di			       
+	di
 	ld hl,IOINITDATA	; I/O registers configuration table
 LOOP_IOREG:
 	ld a,(hl)			; Load I/O address to output
-	ld c,a			
-	inc a			   
+	ld c,a
+	inc a
 	jr z,REGTEST		; If address is 0xff, we're done
-	inc hl			    
+	inc hl
 	ld b,(hl)			; Read number of bytes to output
 	inc hl			    ;
 LOOP_IODATA:
 	ld a,(hl)			; Byte to output to I/O
 	out (c),a		    ; Output to I/O register
-	inc hl			    
+	inc hl
 	djnz LOOP_IODATA	; Still bytes for this register?
 	jr LOOP_IOREG		; Go to next register
 
@@ -105,23 +105,23 @@ LOOP_IODATA:
 REGTEST:	ld a,%11111111
 	scf			        ; carry set
 	ld i,a		        ; pass value throught i
-	ld a,i		
+	ld a,i
 PASSVALUE:              ; passes a value (all 1s, then all 0s, through all the registers)
 	ld b,a			    ; pass value through b,c,d,e,l,h
-	ld c,b			
-	ld d,c			
-	ld e,d			
-	ld l,e			
-	ld h,l			
+	ld c,b
+	ld d,c
+	ld e,d
+	ld l,e
+	ld h,l
 	ex af,af'		    ; value goes to other register bank
 	ld a,h			    ; a contains the passed value
 	exx                 ; now same exercice with the other bank
-	ld b,a			
-	ld c,b			
-	ld d,c			
-	ld e,d			
-	ld l,e			
-	ld h,l			
+	ld b,a
+	ld c,b
+	ld d,c
+	ld e,d
+	ld l,e
+	ld h,l
 	ex af,af'		    ; And get the other a to fill, and the carry
 	ld a,h			    ; and fill it
 	jr nc,OTHER_TEST		; second loop? (c was 1 first time)
@@ -371,7 +371,7 @@ l01dbh:
 	ld iy,l01ebh		;01e4	fd 21 eb 01 	. ! . .
 	jp l0698h		;01e8	c3 98 06 	. . .
 l01ebh:
-	ld c,020h		;01eb	0e 20 	.  
+	ld c,020h		;01eb	0e 20 	.
 	ld ix,l01f4h		;01ed	dd 21 f4 01 	. ! . .
 	jp l07e3h		;01f1	c3 e3 07 	. . .
 l01f4h:
@@ -379,7 +379,7 @@ l01f4h:
 	ld l,h			;01f6	6c 	l
 	jp l012ah		;01f7	c3 2a 01 	. * .
 l01fah:
-	cp 020h		;01fa	fe 20 	.  
+	cp 020h		;01fa	fe 20 	.
 	jr nz,l0205h		;01fc	20 07 	  .
 	ld (0fd86h),hl		;01fe	22 86 fd 	" . .
 	ex de,hl			;0201	eb 	.
@@ -460,7 +460,7 @@ l027dh:
 	ld a,e			;027d	7b 	{
 	and 0e0h		;027e	e6 e0 	. .
 l0280h:
-	add a,020h		;0280	c6 20 	.  
+	add a,020h		;0280	c6 20 	.
 	cp 0a0h		;0282	fe a0 	. .
 	jr z,l0280h		;0284	28 fa 	( .
 	or a			;0286	b7 	.
@@ -515,7 +515,7 @@ l02d7h:
 l02dch:
 	ld (hl),b			;02dc	70 	p
 	ld a,h			;02dd	7c 	|
-	add a,020h		;02de	c6 20 	.  
+	add a,020h		;02de	c6 20 	.
 	ld h,a			;02e0	67 	g
 	djnz l02dch		;02e1	10 f9 	. .
 	ld hl,l0f53h		;02e3	21 53 0f 	! S .
@@ -527,7 +527,7 @@ l02edh:
 	jr z,l02f3h		;02f0	28 01 	( .
 	ei			;02f2	fb 	.
 l02f3h:
-	ld hl,02000h		;02f3	21 00 20 	! .  
+	ld hl,02000h		;02f3	21 00 20 	! .
 	ld b,001h		;02f6	06 01 	. .
 l02f8h:
 	ld a,(hl)			;02f8	7e 	~
@@ -546,7 +546,7 @@ l0308h:
 l0310h:
 	inc b			;0310	04 	.
 	ld a,h			;0311	7c 	|
-	add a,020h		;0312	c6 20 	.  
+	add a,020h		;0312	c6 20 	.
 	ld h,a			;0314	67 	g
 	jr nz,l02f8h		;0315	20 e1 	  .
 	jp l05f8h		;0317	c3 f8 05 	. . .
@@ -676,7 +676,7 @@ l03d2h:
 	jr l0417h		;03d7	18 3e 	. >
 l03d9h:
 	ex af,af'			;03d9	08 	.
-	ld c,020h		;03da	0e 20 	.  
+	ld c,020h		;03da	0e 20 	.
 	ld ix,l03e3h		;03dc	dd 21 e3 03 	. ! . .
 	jp l07e3h		;03e0	c3 e3 07 	. . .
 l03e3h:
@@ -860,7 +860,7 @@ l04f7h:
 	jp l05f8h		;0518	c3 f8 05 	. . .
 l051bh:
 	cp 059h		;051b	fe 59 	. Y
-	jr nz,l053fh		;051d	20 20 	   
+	jr nz,l053fh		;051d	20 20
 l051fh:
 	call sub_07ach		;051f	cd ac 07 	. . .
 	cp 00dh		;0522	fe 0d 	. .
@@ -1166,12 +1166,12 @@ l0714h:
 	rld
 	out (c),a
 	ld a,b
-	add a,020h		;0719	c6 20 	.  
+	add a,020h		;0719	c6 20 	.
 	ld b,a			;071b	47 	G
 	rrd		;071c	ed 67 	. g
 	out (c),a		;071e	ed 79 	. y
 	ld a,b			;0720	78 	x
-	add a,020h		;0721	c6 20 	.  
+	add a,020h		;0721	c6 20 	.
 	ld b,a			;0723	47 	G
 	inc hl			;0724	23 	#
 	or a			;0725	b7 	.
@@ -1283,7 +1283,7 @@ sub_07dbh:
 	pop ix		;07db	dd e1 	. .
 	jr l07ebh		;07dd	18 0c 	. .
 sub_07dfh:
-	ld c,020h		;07df	0e 20 	.  
+	ld c,020h		;07df	0e 20 	.
 sub_07e1h:
 	pop ix		;07e1	dd e1 	. .
 l07e3h:
@@ -1335,7 +1335,7 @@ l0829h:
 	call sub_078eh		;0829	cd 8e 07 	. . .
 	jr z,l0836h		;082c	28 08 	( .
 	in a,(DCOMM)		;082e	db f0 	. .
-	and 07fh		;0830	e6 7f 	. 
+	and 07fh		;0830	e6 7f 	.
 	ld c,a			;0832	4f 	O
 	call sub_07e1h		;0833	cd e1 07 	. . .
 l0836h:
@@ -1941,7 +1941,7 @@ l0c12h:
 	jp l0b18h		;0c1c	c3 18 0b 	. . .
 l0c1fh:
 	cp 04ah		;0c1f	fe 4a 	. J
-	jr nz,l0c43h		;0c21	20 20 	   
+	jr nz,l0c43h		;0c21	20 20
 	call sub_0c9fh		;0c23	cd 9f 0c 	. . .
 	ld a,(0fd22h)		;0c26	3a 22 fd 	: " .
 	sbc a,019h		;0c29	de 19 	. .
@@ -1978,7 +1978,7 @@ l0c55h:
 	ld a,003h		;0c58	3e 03 	> .
 	ld (0fd76h),a		;0c5a	32 76 fd 	2 v .
 	ld a,c			;0c5d	79 	y
-	sbc a,020h		;0c5e	de 20 	.  
+	sbc a,020h		;0c5e	de 20 	.
 	cp 018h		;0c60	fe 18 	. .
 	jp p,l0b31h		;0c62	f2 31 0b 	. 1 .
 	ld (0fd22h),a		;0c65	32 22 fd 	2 " .
@@ -1987,7 +1987,7 @@ l0c6bh:
 	dec a			;0c6b	3d 	=
 	jp nz,l0b2dh		;0c6c	c2 2d 0b 	. - .
 	ld a,c			;0c6f	79 	y
-	sbc a,020h		;0c70	de 20 	.  
+	sbc a,020h		;0c70	de 20 	.
 	cp 050h		;0c72	fe 50 	. P
 	jp p,l0b2dh		;0c74	f2 2d 0b 	. - .
 	jp l0b18h		;0c77	c3 18 0b 	. . .
@@ -2084,7 +2084,7 @@ l0d07h:
 	rlca			;0d0a	07 	.
 	ccf			;0d0b	3f 	?
 	rr l		;0d0c	cb 1d 	. .
-	ld a,07fh		;0d0e	3e 7f 	> 
+	ld a,07fh		;0d0e	3e 7f 	>
 	out (DPIOB),a		;0d10	d3 fa 	. .
 	ld a,0ffh		;0d12	3e ff 	> .
 	out (DPIOB),a		;0d14	d3 fa 	. .
@@ -2170,7 +2170,7 @@ l0d99h:
 	call sub_0a8fh		;0d9b	cd 8f 0a 	. . .
 	call sub_0aa5h		;0d9e	cd a5 0a 	. . .
 	jr nz,l0dabh		;0da1	20 08 	  .
-	bit 7,a		;0da3	cb 7f 	. 
+	bit 7,a		;0da3	cb 7f 	.
 	jr z,l0dabh		;0da5	28 04 	( .
 	bit 6,a		;0da7	cb 77 	. w
 	jr z,l0d73h		;0da9	28 c8 	( .
@@ -2262,7 +2262,7 @@ IOINITDATA:
 	nop			;0e4e	00 	.
 	dec c			;0e4f	0d 	.
 	nop			;0e50	00 	.
-	cp 020h		;0e51	fe 20 	.  
+	cp 020h		;0e51	fe 20 	.
 	nop			;0e53	00 	.
 	nop			;0e54	00 	.
 	dec de			;0e55	1b 	.
@@ -2281,7 +2281,7 @@ IOINITDATA:
 	nop			;0e8e	00 	.
 	dec c			;0e8f	0d 	.
 	nop			;0e90	00 	.
-	cp 020h		;0e91	fe 20 	.  
+	cp 020h		;0e91	fe 20 	.
 	nop			;0e93	00 	.
 	nop			;0e94	00 	.
 	dec de			;0e95	1b 	.
@@ -2322,7 +2322,7 @@ l0ecdh:
 	nop			;0ece	00 	.
 	dec c			;0ecf	0d 	.
 	nop			;0ed0	00 	.
-	cp 020h		;0ed1	fe 20 	.  
+	cp 020h		;0ed1	fe 20 	.
 	nop			;0ed3	00 	.
 	nop			;0ed4	00 	.
 	dec de			;0ed5	1b 	.
@@ -2372,7 +2372,7 @@ l0ef8h:
 	ld e,h			;0f06	5c 	\
 	ld e,l			;0f07	5d 	]
 	dec l			;0f08	2d 	-
-	ld a,a			;0f09	7f 	
+	ld a,a			;0f09	7f
 l0f0ah:
 	add hl,sp			;0f0a	39 	9
 	nop			;0f0b	00 	.
