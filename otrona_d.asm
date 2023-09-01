@@ -3,6 +3,12 @@
 
 	org	00000h
 
+; To avoid using stack a lot of code uses ix as the return address
+CALLIX: macro adrs
+		ld ix,$+7
+		jp adrs
+	endm
+
 ; I/O ports, see technical manual page 3-28 (table 3-13)
 FPYBCA: equ 0e0h	; FLOPPY STATUS PORT
 FPYBWR:	equ 0e1h	; FLOPPY DATA PORT
@@ -196,11 +202,8 @@ OTHER_TEST:
 
 	;   (unsure)
 	ld sp,STACK_BASE	; Initial stack
-	ld hl,l0f53h		;00ae	21 53 0f 	! S .
-	ld ix,CONT		;00b1	dd 21 b8 00 	. ! . .
-	jp MAPMEM		;00b5	c3 11 07 	. . .
-
-CONT:
+	ld hl,MEMMAP8TOF
+	CALLIX MAPMEM
 	xor a			;00b8	af 	.
 	ld i,a		;00b9	ed 47 	. G
 	ld hl,0fd00h		;00bb	21 00 fd 	! . .
@@ -508,11 +511,9 @@ l02c8h:
 	cp 'M'
 	jr nz,l031ah		;02ca	20 4e 	  N
 	; Map Test
-	di			;02cc	f3 	.
-	ld hl,l0f4fh		;02cd	21 4f 0f 	! O .
-	ld ix,l02d7h		;02d0	dd 21 d7 02 	. ! . .
-	jp MAPMEM		;02d4	c3 11 07 	. . .
-l02d7h:
+	di
+	ld hl,MEMMAPFTO8
+	CALLIX MAPMEM
 	ld hl,0		;02d7	21 00 00 	! . .
 	ld b,007h		;02da	06 07 	. .
 l02dch:
@@ -521,10 +522,8 @@ l02dch:
 	add a,020h		;02de	c6 20 	.
 	ld h,a			;02e0	67 	g
 	djnz l02dch		;02e1	10 f9 	. .
-	ld hl,l0f53h		;02e3	21 53 0f 	! S .
-	ld ix,l02edh		;02e6	dd 21 ed 02 	. ! . .
-	jp MAPMEM		;02ea	c3 11 07 	. . .
-l02edh:
+	ld hl,MEMMAP8TOF		;02e3	21 53 0f 	! S .
+	CALLIX MAPMEM
 	ld a,i		;02ed	ed 57 	. W
 	or a			;02ef	b7 	.
 	jr z,l02f3h		;02f0	28 01 	( .
@@ -625,9 +624,7 @@ l0385h:
 	ld c,a			;038d	4f 	O
 	ld b,000h		;038e	06 00 	. .
 	add hl,bc			;0390	09 	.
-	ld ix,l0398h		;0391	dd 21 98 03 	. ! . .
-	jp MAPMEM		;0395	c3 11 07 	. . .
-l0398h:
+	CALLIX MAPMEM
 	ld a,i		;0398	ed 57 	. W
 	or a			;039a	b7 	.
 	jr z,l03a0h		;039b	28 03 	( .
@@ -715,10 +712,8 @@ l0415h:
 	djnz l03c5h		;0415	10 ae 	. .
 l0417h:
 	di			;0417	f3 	.
-	ld hl,l0f53h		;0418	21 53 0f 	! S .
-	ld ix,l0422h		;041b	dd 21 22 04 	. ! " .
-	jp MAPMEM		;041f	c3 11 07 	. . .
-l0422h:
+	ld hl,MEMMAP8TOF		;0418	21 53 0f 	! S .
+	CALLIX MAPMEM
 	ld a,d			;0422	7a 	z
 	and 003h		;0423	e6 03 	. .
 	jr nz,l0432h		;0425	20 0b 	  .
@@ -2373,10 +2368,10 @@ l0f3fh:
 	xor e			;0f4c	ab 	.
 	ret z			;0f4d	c8 	.
 	rst 28h			;0f4e	ef 	.
-l0f4fh:
+MEMMAPFTO8:
 		;	Memory map
 	db 0xfe, 0xdc, 0xba, 0x98
-l0f53h:
+MEMMAP8TOF:
 		;	Memory map
 	db 0x89, 0xab, 0xcd, 0xef
 	db 0x48 	; . . H
