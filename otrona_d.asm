@@ -9,6 +9,12 @@ CALLIX: macro adrs
 		jp adrs
 	endm
 
+ESCSEQ: equ 0xfd76		; Escape sequence in progress
+						; (maybe, could be set of flags)
+CURSOR: equ 0xfd22		; Cursor position row, column
+CURSORROW: equ 0xfd22	; Cursor row
+CURSORCOL: equ 0xfd23	; Cursor column
+
 ; I/O ports, see technical manual page 3-28 (table 3-13)
 FPYBCA: equ 0e0h	; FLOPPY STATUS PORT
 FPYBWR:	equ 0e1h	; FLOPPY DATA PORT
@@ -90,7 +96,7 @@ RESET:
 	jp BOOT			; Called at boot
 	jp l062fh		;0003	c3 2f 06 	. / .
 	jp l0865h		;0006	c3 65 08 	. e .
-	jp l0abah		;0009	c3 ba 0a 	. . .
+	jp PRINTC
 	jp l090eh		;000c	c3 0e 09 	. . .
 
 WELCOME_MSG:
@@ -401,17 +407,26 @@ l01fah:
 	jp l0126h		;0202	c3 26 01 	. & .
 DIAGNOSTICS:
 	cp 'G'          ; Generate Display Pattern
-	jr nz,l0241h		;0207	20 38 	  8
-	ld c,01eh		;0209	0e 1e 	. .
-	call l0abah		;020b	cd ba 0a 	. . .
-	ld de,0087fh		;020e	11 7f 08 	.  .
-	ld c,02bh		;0211	0e 2b 	. +
+	jr nz,DIAGNOSTICS_H
+
+; Description:The display screen fills with the character "+" in every
+; position of the display except the cursor position (the
+; lower right hand corner).
+; Exit:Press any key to return Attache to the
+; entry mode.
+; Reporting:No errors are detected or reported.
+
+	ld c,01eh		; #### Sounds we want to write 0x1e (RS)
+	call PRINTC
+	ld de,2175
+	ld c,'+'
+		; loop 2175 times
 l0213h:
-	call l0abah		;0213	cd ba 0a 	. . .
-	dec e			;0216	1d 	.
-	jr nz,l0213h		;0217	20 fa 	  .
-	dec d			;0219	15 	.
-	jr nz,l0213h		;021a	20 f7 	  .
+	call PRINTC
+	dec e
+	jr nz,l0213h
+	dec d
+	jr nz,l0213h
 	call sub_065ah		;021c	cd 5a 06 	. Z .
 	bit 7,d		;021f	cb 7a 	. z
 	jr z,l0236h		;0221	28 13 	( .
@@ -431,7 +446,8 @@ l0236h:
 	ei			;023b	fb 	.
 	call sub_061ch		;023c	cd 1c 06 	. . .
 	jr l0236h		;023f	18 f5 	. .
-l0241h:
+
+DIAGNOSTICS_H:
 	cp 'H'          ; Display RAM test
 	jr nz,l028dh		;0243	20 48 	  H
 	ld e,000h		;0245	1e 00 	. .
@@ -503,7 +519,7 @@ l02a7h:
 	cp 05eh		;02aa	fe 5e 	. ^
 	jp z,l062fh		;02ac	ca 2f 06 	. / .
 	ld c,a			;02af	4f 	O
-	call l0abah		;02b0	cd ba 0a 	. . .
+	call PRINTC
 	ld h,a			;02b3	67 	g
 	call sub_0696h		;02b4	cd 96 06 	. . .
 	call sub_07dfh		;02b7	cd df 07 	. . .
@@ -1300,7 +1316,7 @@ l07e3h:
 	ld a,i		;07e3	ed 57 	. W
 	or a			;07e5	b7 	.
 	jr z,l07f2h		;07e6	28 0a 	( .
-	call l0abah		;07e8	cd ba 0a 	. . .
+	call PRINTC
 l07ebh:
 	ld a,(0fd85h)		;07eb	3a 85 fd 	: . .
 	bit 4,a		;07ee	cb 67 	. g
@@ -1735,13 +1751,15 @@ l0ab6h:
 	ret
 
 
-l0abah:
-	push hl			;0aba	e5 	.
-	push de			;0abb	d5 	.
-	push bc			;0abc	c5 	.
-	push af			;0abd	f5 	.
+
+	;	Prints the char in C, interpreting escape codes
+PRINTC:
+	push hl
+	push de
+	push bc
+	push af
 l0abeh:
-	ld hl,(0fd22h)		;0abe	2a 22 fd 	* " .
+	ld hl,(CURSOR)		;0abe	2a 22 fd 	* " .
 	ld a,(0fd77h)		;0ac1	3a 77 fd 	: w .
 	add a,l			;0ac4	85 	.
 	cp 018h		;0ac5	fe 18 	. .
@@ -1749,13 +1767,14 @@ l0abeh:
 	sbc a,018h		;0ac9	de 18 	. .
 l0acbh:
 	ld l,a			;0acb	6f 	o
-	ld a,(0fd76h)		;0acc	3a 76 fd 	: v .
+	ld a,(ESCSEQ)
 	or a			;0acf	b7 	.
 	jp nz,l0bbfh		;0ad0	c2 bf 0b 	. . .
-	ld a,c			;0ad3	79 	y
-	and 060h		;0ad4	e6 60 	. `
-	jr z,l0b36h		;0ad6	28 5e 	( ^
-	ld a,c			;0ad8	79 	y
+	ld a,c
+	and 0x60		; zero if ascii less than ' '
+	jr z,CONTROL	; Handle control chars
+
+	ld a,c
 	cp 040h		;0ad9	fe 40 	. @
 	jr c,l0af3h		;0adb	38 16 	8 .
 	cp 061h		;0add	fe 61 	. a
@@ -1776,9 +1795,9 @@ l0af3h:
 	ld e,a			;0af3	5f 	_
 	ld a,l			;0af4	7d 	}
 	or 0e0h		;0af5	f6 e0 	. .
-	out (SDSPY),a		;0af7	d3 ee 	. .
+	out (SDSPY),a
 	ld b,h			;0af9	44 	D
-	ld c,0feh		;0afa	0e fe 	. .
+	ld c,DDSPY
 	out (c),e		;0afc	ed 59 	. Y
 	and 0dfh		;0afe	e6 df 	. .
 	out (SDSPY),a		;0b00	d3 ee 	. .
@@ -1788,17 +1807,17 @@ l0af3h:
 	out (c),a		;0b08	ed 79 	. y
 	ld a,h			;0b0a	7c 	|
 	cp 04fh		;0b0b	fe 4f 	. O
-	jr nz,l0b17h		;0b0d	20 08 	  .
+	jr nz,NEXTCOL		;0b0d	20 08 	  .
 l0b0fh:
 	xor a			;0b0f	af 	.
-	ld (0fd23h),a		;0b10	32 23 fd 	2 # .
+	ld (CURSORCOL),a		;0b10	32 23 fd 	2 # .
 	ld c,00ah		;0b13	0e 0a 	. .
 	jr l0abeh		;0b15	18 a7 	. .
-l0b17h:
+NEXTCOL:
 	inc a			;0b17	3c 	<
-l0b18h:
+SETCOL:
 	ld h,a			;0b18	67 	g
-	ld (0fd23h),a		;0b19	32 23 fd 	2 # .
+	ld (CURSORCOL),a		;0b19	32 23 fd 	2 # .
 l0b1ch:
 	ld a,0ach		;0b1c	3e ac 	> .
 	out (SDSPY),a		;0b1e	d3 ee 	. .
@@ -1810,43 +1829,49 @@ l0b1ch:
 	ld a,l			;0b28	7d 	}
 	and 01fh		;0b29	e6 1f 	. .
 	out (DDSPY),a		;0b2b	d3 fe 	. .
-l0b2dh:
-	xor a			;0b2d	af 	.
-l0b2eh:
-	ld (0fd76h),a		;0b2e	32 76 fd 	2 v .
+CLEARESC:
+	xor a
+STOREESC:
+	ld (ESCSEQ),a		;0b2e	32 76 fd 	2 v .
 l0b31h:
 	pop af			;0b31	f1 	.
 	pop bc			;0b32	c1 	.
 	pop de			;0b33	d1 	.
 	pop hl			;0b34	e1 	.
 	ret			;0b35	c9 	.
-l0b36h:
-	ld a,c			;0b36	79 	y
-	cp 01bh		;0b37	fe 1b 	. .
-	jr nz,l0b40h		;0b39	20 05 	  .
-	ld a,001h		;0b3b	3e 01 	> .
-	jp l0b2eh		;0b3d	c3 2e 0b 	. . .
-l0b40h:
-	cp 008h		;0b40	fe 08 	. .
+
+
+
+	;	We print ESC sequences and control chars
+CONTROL:
+	ld a,c
+	cp 0x1b			; ESC
+	jr nz,CONTROL1
+	ld a,1
+	jp STOREESC
+
+	;	Single char control
+CONTROL1:
+	cp 8			; Backspace
 	jr nz,l0b4ch		;0b42	20 08 	  .
 	ld a,h			;0b44	7c 	|
 	or a			;0b45	b7 	.
-	jr z,l0b2dh		;0b46	28 e5 	( .
-	dec a			;0b48	3d 	=
-	jp l0b18h		;0b49	c3 18 0b 	. . .
+	jr z,CLEARESC
+	dec a
+	jp SETCOL
 l0b4ch:
 	cp 00dh		;0b4c	fe 0d 	. .
 	jr nz,l0b54h		;0b4e	20 04 	  .
-	xor a			;0b50	af 	.
-	jp l0b18h		;0b51	c3 18 0b 	. . .
+	xor a
+	jp SETCOL
 l0b54h:
 	cp 00ah		;0b54	fe 0a 	. .
 	jr nz,l0b91h		;0b56	20 39 	  9
-	ld a,(0fd22h)		;0b58	3a 22 fd 	: " .
+	ld a,(CURSORROW)		;0b58	3a 22 fd 	: " .
 	cp 017h		;0b5b	fe 17 	. .
 	jr z,l0b6dh		;0b5d	28 0e 	( .
 	inc a			;0b5f	3c 	<
-	ld (0fd22h),a		;0b60	32 22 fd 	2 " .
+	ld (CURSORROW),a		;0b60	32 22 fd 	2 " .
 	inc l			;0b63	2c 	,
 	ld a,l			;0b64	7d 	}
 	cp 018h		;0b65	fe 18 	. .
@@ -1873,7 +1898,7 @@ l0b7ch:
 	ld l,000h		;0b86	2e 00 	. .
 l0b88h:
 	call sub_0c7ah		;0b88	cd 7a 0c 	. z .
-	ld a,(0fd23h)		;0b8b	3a 23 fd 	: # .
+	ld a,(CURSORCOL)		;0b8b	3a 23 fd 	: # .
 	ld h,a			;0b8e	67 	g
 	jr l0b1ch		;0b8f	18 8b 	. .
 l0b91h:
@@ -1884,13 +1909,13 @@ l0b91h:
 	jp l0740h		;0b9c	c3 40 07 	. @ .
 l0b9fh:
 	ei			;0b9f	fb 	.
-	jp l0b2dh		;0ba0	c3 2d 0b 	. - .
+	jp CLEARESC		;0ba0	c3 2d 0b 	. - .
 l0ba3h:
 	cp 01eh		;0ba3	fe 1e 	. .
 	jr nz,l0bb2h		;0ba5	20 0b 	  .
 l0ba7h:
 	ld hl,1		;0ba7	21 01 00 	! . .
-	ld (0fd22h),hl		;0baa	22 22 fd 	" " .
+	ld (CURSORROW),hl		;0baa	22 22 fd 	" " .
 	ld c,008h		;0bad	0e 08 	. .
 	jp l0abeh		;0baf	c3 be 0a 	. . .
 l0bb2h:
@@ -1906,7 +1931,7 @@ l0bbfh:
 	cp 03dh		;0bc4	fe 3d 	. =
 	jr nz,l0bcfh		;0bc6	20 07 	  .
 l0bc8h:
-	ld hl,0fd76h		;0bc8	21 76 fd 	! v .
+	ld hl,ESCSEQ		;0bc8	21 76 fd 	! v .
 	inc (hl)			;0bcb	34 	4
 	jp l0b31h		;0bcc	c3 31 0b 	. 1 .
 l0bcfh:
@@ -1915,22 +1940,22 @@ l0bcfh:
 	cp 041h		;0bd3	fe 41 	. A
 	jr nz,l0bebh		;0bd5	20 14 	  .
 l0bd7h:
-	ld a,(0fd22h)		;0bd7	3a 22 fd 	: " .
+	ld a,(CURSORROW)		;0bd7	3a 22 fd 	: " .
 	or a			;0bda	b7 	.
-	jp z,l0b2dh		;0bdb	ca 2d 0b 	. - .
+	jp z,CLEARESC		;0bdb	ca 2d 0b 	. - .
 	dec a			;0bde	3d 	=
 	dec l			;0bdf	2d 	-
 	jp p,l0be5h		;0be0	f2 e5 0b 	. . .
 	ld l,017h		;0be3	2e 17 	. .
 l0be5h:
-	ld (0fd22h),a		;0be5	32 22 fd 	2 " .
+	ld (CURSORROW),a		;0be5	32 22 fd 	2 " .
 	jp l0b1ch		;0be8	c3 1c 0b 	. . .
 l0bebh:
 	cp 042h		;0beb	fe 42 	. B
 	jr nz,l0c04h		;0bed	20 15 	  .
-	ld a,(0fd22h)		;0bef	3a 22 fd 	: " .
+	ld a,(CURSORROW)		;0bef	3a 22 fd 	: " .
 	cp 017h		;0bf2	fe 17 	. .
-	jp z,l0b2dh		;0bf4	ca 2d 0b 	. - .
+	jp z,CLEARESC		;0bf4	ca 2d 0b 	. - .
 	inc a			;0bf7	3c 	<
 	inc l			;0bf8	2c 	,
 	push af			;0bf9	f5 	.
@@ -1948,21 +1973,21 @@ l0c08h:
 	ld a,h			;0c08	7c 	|
 	cp 04fh		;0c09	fe 4f 	. O
 	jp z,l0b0fh		;0c0b	ca 0f 0b 	. . .
-	inc a			;0c0e	3c 	<
-	jp l0b18h		;0c0f	c3 18 0b 	. . .
+	inc a
+	jp SETCOL
 l0c12h:
 	cp 044h		;0c12	fe 44 	. D
 	jr nz,l0c1fh		;0c14	20 09 	  .
 	ld a,h			;0c16	7c 	|
 	or a			;0c17	b7 	.
-	jp z,l0b2dh		;0c18	ca 2d 0b 	. - .
+	jp z,CLEARESC		;0c18	ca 2d 0b 	. - .
 	dec a			;0c1b	3d 	=
-	jp l0b18h		;0c1c	c3 18 0b 	. . .
+	jp SETCOL
 l0c1fh:
 	cp 04ah		;0c1f	fe 4a 	. J
 	jr nz,l0c43h		;0c21	20 20
 	call sub_0c9fh		;0c23	cd 9f 0c 	. . .
-	ld a,(0fd22h)		;0c26	3a 22 fd 	: " .
+	ld a,(CURSORROW)		;0c26	3a 22 fd 	: " .
 	sbc a,019h		;0c29	de 19 	. .
 	cpl			;0c2b	2f 	/
 	ld b,a			;0c2c	47 	G
@@ -1981,7 +2006,7 @@ l0c38h:
 	pop bc			;0c3d	c1 	.
 l0c3eh:
 	djnz l0c2fh		;0c3e	10 ef 	. .
-	jp l0b2dh		;0c40	c3 2d 0b 	. - .
+	jp CLEARESC		;0c40	c3 2d 0b 	. - .
 l0c43h:
 	cp 04bh		;0c43	fe 4b 	. K
 	jr nz,l0c4dh		;0c45	20 06 	  .
@@ -1990,26 +2015,26 @@ l0c43h:
 l0c4dh:
 	cp 048h		;0c4d	fe 48 	. H
 	jp z,l0ba7h		;0c4f	ca a7 0b 	. . .
-	jp l0b2dh		;0c52	c3 2d 0b 	. - .
+	jp CLEARESC		;0c52	c3 2d 0b 	. - .
 l0c55h:
 	dec a			;0c55	3d 	=
 	jr nz,l0c6bh		;0c56	20 13 	  .
 	ld a,003h		;0c58	3e 03 	> .
-	ld (0fd76h),a		;0c5a	32 76 fd 	2 v .
+	ld (ESCSEQ),a		;0c5a	32 76 fd 	2 v .
 	ld a,c			;0c5d	79 	y
 	sbc a,020h		;0c5e	de 20 	.
 	cp 018h		;0c60	fe 18 	. .
 	jp p,l0b31h		;0c62	f2 31 0b 	. 1 .
-	ld (0fd22h),a		;0c65	32 22 fd 	2 " .
+	ld (CURSORROW),a		;0c65	32 22 fd 	2 " .
 	jp l0b31h		;0c68	c3 31 0b 	. 1 .
 l0c6bh:
 	dec a			;0c6b	3d 	=
-	jp nz,l0b2dh		;0c6c	c2 2d 0b 	. - .
+	jp nz,CLEARESC		;0c6c	c2 2d 0b 	. - .
 	ld a,c			;0c6f	79 	y
 	sbc a,020h		;0c70	de 20 	.
-	cp 050h		;0c72	fe 50 	. P
-	jp p,l0b2dh		;0c74	f2 2d 0b 	. - .
-	jp l0b18h		;0c77	c3 18 0b 	. . .
+	cp 80			; 80 columns
+	jp p,CLEARESC
+	jp SETCOL
 sub_0c7ah:
 	ld h,000h		;0c7a	26 00 	& .
 	ld a,l			;0c7c	7d 	}
@@ -2070,19 +2095,21 @@ l0ca9h:
 	set 5,d		;0cd3	cb ea 	. .
 	set 5,e		;0cd5	cb eb 	. .
 sub_0cd7h:
-	ld c,0eeh		;0cd7	0e ee 	. .
+	ld c,SDSPY
 	out (c),d		;0cd9	ed 51 	. Q
 	ld hl,0fd26h		;0cdb	21 26 fd 	! & .
 	push hl			;0cde	e5 	.
 	push bc			;0cdf	c5 	.
-	ld c,0feh		;0ce0	0e fe 	. .
+	ld c,DDSPY
 	inir		;0ce2	ed b2 	. .
 	pop bc			;0ce4	c1 	.
 	pop hl			;0ce5	e1 	.
 	out (c),e		;0ce6	ed 59 	. Y
-	ld c,0feh		;0ce8	0e fe 	. .
-	otir		;0cea	ed b3 	. .
-	ret			;0cec	c9 	.
+	ld c,DDSPY
+	otir
+	ret
+
+	; dead code?
 	push hl			;0ced	e5 	.
 	push de			;0cee	d5 	.
 	push bc			;0cef	c5 	.
