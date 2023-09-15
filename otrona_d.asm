@@ -11,6 +11,20 @@ CALLIX: macro adrs
 		jp adrs
 	endm
 
+
+;
+;	SELECT DISK CONFIGURATION
+;
+DBL:	equ	1	;DENSITY (0=SINGLE, 1=DOUBLE)
+FILSIZ:	equ	(DBL+1)*256
+SECS:	equ	1	;SECTORS (0=9, 1=10)
+SIDES:	equ	1	;SIDES   (0=SINGLE, 1=DOUBLE)
+FILBUF:	equ	0FE00H	; LOCATION OF DISK BUFFER
+
+
+
+
+
 ESCSEQ: equ 0xfd76		; Escape sequence in progress
 						; (maybe, could be set of flags)
 CURSOR: equ 0xfd22		; Cursor position row, column
@@ -97,14 +111,13 @@ STACK_BASE: equ $fe00
 RESET:
 	jp INIT			; Init machine
 	jp GOMON		; Go to monitor
-	jp l0865h		;0006	c3 65 08 	. e .
+	jp DISKOP
 	jp PRINTC
-	jp l090eh		;000c	c3 0e 09 	. . .
+	jp ERROR
 
 WELCOME_MSG:
 	db $1b, 'J'    	; ESC-J , probably erase to end of screen
-    db 'OTRONA ATTACHE\r'
-	db ('\n')|0x80		; LF (with bit 7 for end of string)
+    db 'OTRONA ATTACHE\r', '\n'|0x80	; LF (with bit 7 for end of string)
 
 	;   BOOT, we init the hardware
 INIT:
@@ -800,7 +813,7 @@ l0469h:
 	call sub_06bbh		;0470	cd bb 06 	. . .
 	ld h,c			;0473	61 	a
 	ld b,07dh		;0474	06 7d 	. }
-	call sub_067ah		;0476	cd 7a 06 	. z .
+	call DELAY
 	call sub_06bbh		;0479	cd bb 06 	. . .
 	ei			;047c	fb 	.
 	ld a,c			;047d	79 	y
@@ -851,8 +864,8 @@ l04c0h:
 l04cbh:
 	cp 'V'				; Read Disk Sector
 	jr nz,l04e1h		;04cd	20 12 	  .
-	ld ix,l090eh		;04cf	dd 21 0e 09 	. ! . .
-	call sub_0997h		;04d3	cd 97 09 	. . .
+	ld ix,ERROR
+	call FPREAD
 l04d6h:
 	ld a,(0fd15h)		;04d6	3a 15 fd 	: . .
 	and 0c0h		;04d9	e6 c0 	. .
@@ -861,8 +874,8 @@ l04d6h:
 l04e1h:
 	cp 'W'				; write Disk Sector
 	jr nz,l04eeh		;04e3	20 09 	  .
-	ld ix,l090eh		;04e5	dd 21 0e 09 	. ! . .
-	call sub_09a0h		;04e9	cd a0 09 	. . .
+	ld ix,ERROR
+	call FPWRIT
 	jr l04d6h		;04ec	18 e8 	. .
 l04eeh:
 	cp 'X'				; I/O Port Transmit Test
@@ -952,8 +965,8 @@ l056dh:
 l0579h:
 	dec h			;0579	25 	%
 	call sub_061ch		;057a	cd 1c 06 	. . .
-	ld ix,l090eh		;057d	dd 21 0e 09 	. ! . .
-	call sub_09a0h		;0581	cd a0 09 	. . .
+	ld ix,ERROR
+	call FPWRIT
 	ld a,(0fd15h)		;0584	3a 15 fd 	: . .
 	and 0c0h		;0587	e6 c0 	. .
 	call nz,sub_0913h		;0589	c4 13 09 	. . .
@@ -963,8 +976,8 @@ l0579h:
 l0590h:
 	push hl			;0590	e5 	.
 	call sub_061ch		;0591	cd 1c 06 	. . .
-	ld ix,l090eh		;0594	dd 21 0e 09 	. ! . .
-	call sub_0997h		;0598	cd 97 09 	. . .
+	ld ix,ERROR
+	call FPREAD
 	ld a,(0fd15h)		;059b	3a 15 fd 	: . .
 	and 0c0h		;059e	e6 c0 	. .
 	call nz,sub_0913h		;05a0	c4 13 09 	. . .
@@ -1086,18 +1099,19 @@ sub_065ah:
 	call sub_06cfh		;0675	cd cf 06 	. . .
 l0678h:
 	ld d,h			;0678	54 	T
-	ret			;0679	c9 	.
-sub_067ah:
-	push bc			;067a	c5 	.
+	ret			;0679	c9 	.0f2c
+DELAY:
+	push bc
 l067bh:
-	push bc			;067b	c5 	.
+	push bc
 l067ch:
-	djnz l067ch		;067c	10 fe 	. .
-	pop bc			;067e	c1 	.
-	djnz l067bh		;067f	10 fa 	. .
-	pop bc			;0681	c1 	.
-	djnz sub_067ah		;0682	10 f6 	. .
-	ret			;0684	c9 	.
+	djnz l067ch
+	pop bc
+	djnz l067bh
+	pop bc
+	djnz DELAY
+	ret
+
 sub_0685h:
 	call sub_07dfh		;0685	cd df 07 	. . .
 	call sub_0692h		;0688	cd 92 06 	. . .
@@ -1417,7 +1431,7 @@ l0850h:
 	ld a,c			;0860	79 	y
 	out (DCOMM),a		;0861	d3 f0 	. .
 	jr l0829h		;0863	18 c4 	. .
-l0865h:
+DISKOP:
 	push hl			;0865	e5 	.
 	ld hl,(0fd20h)		;0866	2a 20 fd 	*   .
 	ld a,h			;0869	7c 	|
@@ -1527,9 +1541,11 @@ l0909h:
 	xor a			;0909	af 	.
 	ld (0fd1eh),a		;090a	32 1e fd 	2 . .
 	ret			;090d	c9 	.
-l090eh:
+
+ERROR:
 	call sub_0913h		;090e	cd 13 09 	. . .
 	jr l092ah		;0911	18 17 	. .
+
 sub_0913h:
 	ld a,(0fd15h)		;0913	3a 15 fd 	: . .
 	ld d,a			;0916	57 	W
@@ -1583,11 +1599,11 @@ l096ah:
 	push hl			;096d	e5 	.
 	ld hl,0fd0eh		;096e	21 0e fd 	! . .
 	push hl			;0971	e5 	.
-	call l0865h		;0972	cd 65 08 	. e .
+	call DISKOP
 	ld hl,0fd11h		;0975	21 11 fd 	! . .
-	call l0865h		;0978	cd 65 08 	. e .
+	call DISKOP
 	pop hl			;097b	e1 	.
-	call l0865h		;097c	cd 65 08 	. e .
+	call DISKOP
 	pop hl			;097f	e1 	.
 l0980h:
 	ld a,l			;0980	7d 	}
@@ -1597,27 +1613,38 @@ l0980h:
 	ld (0fd14h),a		;0987	32 14 fd 	2 . .
 	ld (0fd07h),a		;098a	32 07 fd 	2 . .
 	ld hl,0fd11h		;098d	21 11 fd 	! . .
-	call l0865h		;0990	cd 65 08 	. e .
+	call DISKOP
 	ld hl,0fd00h		;0993	21 00 fd 	! . .
 	ret			;0996	c9 	.
-sub_0997h:
-	push hl			;0997	e5 	.
+
+;READ A FLOPPY SECTOR, WHERE
+;H=CYLINDER, L7=1 IF 96 TPI,
+;L6=HEAD, L4=DRIVE, L0-3=SECTOR (1-10)
+FPREAD:
+	push hl
 	call sub_092dh		;0998	cd 2d 09 	. - .
-	call l0865h		;099b	cd 65 08 	. e .
-	pop hl			;099e	e1 	.
-	ret			;099f	c9 	.
-sub_09a0h:
-	push hl			;09a0	e5 	.
+	call DISKOP
+	pop hl
+	ret
+
+;WRITE A FLOPPY SECTOR, WHERE
+;H=CYLINDER, L7=1 IF 96 TPI,
+;L6=HEAD, L4=DRIVE, L0-3=SECTOR (1-10)
+FPWRIT:
+	push hl
 	call sub_092dh		;09a1	cd 2d 09 	. - .
-	ld (hl),079h		;09a4	36 79 	6 y
-	ld a,045h		;09a6	3e 45 	> E
+	ld (hl),0x79
+	ld a,DBL*40H+5
 	ld (0fd05h),a		;09a8	32 05 fd 	2 . .
-	call l0865h		;09ab	cd 65 08 	. e .
-	pop hl			;09ae	e1 	.
-sub_09afh:
-	ld b,00dh		;09af	06 0d 	. .
-	call sub_067ah		;09b1	cd 7a 06 	. z .
-	ret			;09b4	c9 	.
+	call DISKOP
+	pop hl
+DLY2MS:
+	ld b,13
+	call DELAY
+	ret
+
+
+
 sub_09b5h:
 	xor a			;09b5	af 	.
 	bit 4,l		;09b6	cb 65 	. e
@@ -1663,10 +1690,10 @@ l09d4h:
 	ld (0fd06h),a		;09f2	32 06 fd 	2 . .
 	pop hl			;09f5	e1 	.
 	call sub_061ch		;09f6	cd 1c 06 	. . .
-	ld ix,l090eh		;09f9	dd 21 0e 09 	. ! . .
-	call l0865h		;09fd	cd 65 08 	. e .
+	ld ix,ERROR
+	call DISKOP
 	pop hl			;0a00	e1 	.
-	call sub_09afh		;0a01	cd af 09 	. . .
+	call DLY2MS
 	inc h			;0a04	24 	$
 	ld a,h			;0a05	7c 	|
 	cp 028h		;0a06	fe 28 	. (
@@ -1687,7 +1714,7 @@ BOOT:
 	call sub_0a80h		;0a1d	cd 80 0a 	. . .
 	call l0909h		;0a20	cd 09 09 	. . .
 	ld hl,l0f1fh		;0a23	21 1f 0f 	! . .
-	call l0865h		;0a26	cd 65 08 	. e .
+	call DISKOP
 	ld a,003h		;0a29	3e 03 	> .
 l0a2bh:
 	ld (0fd7ch),sp		;0a2b	ed 73 7c fd 	. s | .
@@ -1695,7 +1722,7 @@ l0a2fh:
 	ld (0fd7bh),a		;0a2f	32 7b fd 	2 { .
 	ld ix,l0a56h		;0a32	dd 21 56 0a 	. ! V .
 	ld hl,1		;0a36	21 01 00 	! . .
-	call sub_0997h		;0a39	cd 97 09 	. . .
+	call FPREAD
 	ld hl,NOSYS_MSG		;0a3c	21 84 0f 	! . .
 	ld a,(0fd15h)		;0a3f	3a 15 fd 	: . .
 	and 0c0h		;0a42	e6 c0 	. .
