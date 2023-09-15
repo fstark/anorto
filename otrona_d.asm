@@ -222,7 +222,7 @@ OTHER_TEST:
 	ld hl,MEMMAP8TOF
 	CALLIX MAPMEM
 
-		;	Start Block test (FD00-FDFF)	
+		;	Start Block test (FD00-FDFF)
 	xor a			;00b8	af 	.
 	ld i,a		;00b9	ed 47 	. G
 	ld hl,0fd00h		;00bb	21 00 fd 	! . .
@@ -540,7 +540,6 @@ l02a7h:
 l02bch:
 	cp 'L'			; Loop tests
 	jr nz,l02c8h
-	
 	ld a,0xff
 	ld (0fd80h),a		;02c2	32 80 fd 	2 . .
 	jp GOMON		;02c5	c3 2f 06 	. / .
@@ -840,7 +839,7 @@ l04b1h:
 	ld a,h			;04b5	7c 	|
 	or l			;04b6	b5 	.
 	jr nz,l04bch		;04b7	20 03 	  .
-	ld de,00f57h		;04b9	11 57 0f 	. W .
+	ld de,UNITSEQ		;04b9	11 57 0f 	. W .
 l04bch:
 	ex de,hl			;04bc	eb 	.
 	ld (0fd83h),hl		;04bd	22 83 fd 	" . .
@@ -1230,32 +1229,46 @@ l0738h:
 	jr z,DISP_HL
 	jp (iy)
 	pop ix		;073e	dd e1 	. .
-l0740h:
-	ld a,0cfh		;0740	3e cf 	> .
-	di			;0742	f3 	.
-	out (SPIOA),a		;0743	d3 f9 	. .
-	xor a			;0745	af 	.
-	out (SPIOA),a		;0746	d3 f9 	. .
-	ld a,0e3h		;0748	3e e3 	> .
-	out (DPIOB),a		;074a	d3 fa 	. .
-	ld bc,00ef8h		;074c	01 f8 0e 	. . .
-l074fh:
-	dec b			;074f	05 	.
-	out (c),b		;0750	ed 41 	. A
-	inc b			;0752	04 	.
-	ld a,0c3h		;0753	3e c3 	> .
-	out (DPIOB),a		;0755	d3 fa 	. .
-	ld a,0e3h		;0757	3e e3 	> .
-	out (DPIOB),a		;0759	d3 fa 	. .
-	outi		;075b	ed a3 	. .
-	ld a,0e7h		;075d	3e e7 	> .
-	out (DPIOB),a		;075f	d3 fa 	. .
-	ld a,0c7h		;0761	3e c7 	> .
-	out (DPIOB),a		;0763	d3 fa 	. .
-	ld a,0e7h		;0765	3e e7 	> .
-	out (DPIOB),a		;0767	d3 fa 	. .
-	jr nz,l074fh		;0769	20 e4 	  .
-	jp (ix)		;076b	dd e9 	. .
+
+;
+;	MAKE THE SOUND SPECIFIED BY THE 14 BYTE TABLE
+;  	POINTED TO BY H-L (R14 OF THE SOUND GENERATOR
+;  	IS FIRST, R0 LAST)
+;
+SOUND:
+	ld a,0cfh
+	di
+	; PIO port A: Control mode 3, all ports as output
+	out (SPIOA),a
+	xor a
+	out (SPIOA),a
+
+	; no-op, strobe 138
+	ld a,0e3h ; 8910 data load
+	out (DPIOB),a
+
+	ld bc,00ef8h
+SNDLOOP:
+	dec b
+	out (c),b
+	inc b
+	; 8910 addr load & strobe
+	ld a,0c3h
+	out (DPIOB),a
+	ld a,0e3h
+	out (DPIOB),a
+	; send data
+	outi
+	; 8910 data load & strobe
+	ld a,0e7h
+	out (DPIOB),a
+	ld a,0c7h
+	out (DPIOB),a
+	ld a,0e7h
+	out (DPIOB),a
+	jr nz,SNDLOOP
+	jp (ix)
+
 sub_076dh:
 	pop ix		;076d	dd e1 	. .
 l076fh:
@@ -1920,9 +1933,9 @@ l0b88h:
 l0b91h:
 	cp 007h		;0b91	fe 07 	. .
 	jr nz,l0ba3h		;0b93	20 0e 	  .
-	ld hl,00fdeh		;0b95	21 de 0f 	! . .
+	ld hl,TONE2		;0b95	21 de 0f 	! . .
 	ld ix,l0b9fh		;0b98	dd 21 9f 0b 	. ! . .
-	jp l0740h		;0b9c	c3 40 07 	. @ .
+	jp SOUND		;0b9c	c3 40 07 	. @ .
 l0b9fh:
 	ei			;0b9f	fb 	.
 	jp CLEARESC		;0ba0	c3 2d 0b 	. - .
@@ -2138,10 +2151,10 @@ INTF4:
 	in a,(DPIOB)		;0cf1	db fa 	. .
 	bit 6,a		;0cf3	cb 77 	. w
 	jr z,l0d49h		;0cf5	28 52 	( R
-	ld hl,l0fd0h		;0cf7	21 d0 0f 	! . .
+	ld hl,TONE1		;0cf7	21 d0 0f 	! . .
 	push ix		;0cfa	dd e5 	. .
 	ld ix,l0d03h		;0cfc	dd 21 03 0d 	. ! . .
-	jp l0740h		;0d00	c3 40 07 	. @ .
+	jp SOUND		;0d00	c3 40 07 	. @ .
 l0d03h:
 	pop ix		;0d03	dd e1 	. .
 	ld b,009h		;0d05	06 09 	. .
@@ -2442,85 +2455,36 @@ MEMMAPFTO8:
 MEMMAP8TOF:
 		;	Memory map
 	db 0x89, 0xab, 0xcd, 0xef
-	db 0x48 	; . . H
-	ld d,c			;0f58	51 	Q
-	ld d,h			;0f59	54 	T
-	ld c,l			;0f5a	4d 	M
-	ld d,d			;0f5b	52 	R
-	ld sp,03252h		;0f5c	31 52 32 	1 R 2
-	ld d,d			;0f5f	52 	R
-	inc sp			;0f60	33 	3
-	ld d,d			;0f61	52 	R
-	ld e,d			;0f62	5a 	Z
-	ld sp,0005ah		;0f63	31 5a 00 	1 Z .
+
+; United test sequence
+UNITSEQ:
+	db "HQTMR1R2R3RZ1Z", 0
 NODISK_MSG:
-	db "\r\nNO DISK OR DISK NOT READABL"
-	db ('E')|0x80
+	db "\r\nNO DISK OR DISK NOT READABL", 'E'|0x80
 NOSYS_MSG:
-	db "\r\nNO SYSTEM ON DIS"
-	db ('K')|0x80
+	db "\r\nNO SYSTEM ON DIS", 'K'|0x80
 TERMINAL_MSG:
-	db "\r\nNOW IN TERMINAL MODE\r\n"
-	db ('\n')|0x80
-	nop			;0fb0	00 	.
-	nop			;0fb1	00 	.
-	nop			;0fb2	00 	.
-	nop			;0fb3	00 	.
-	nop			;0fb4	00 	.
-	nop			;0fb5	00 	.
-	nop			;0fb6	00 	.
-	nop			;0fb7	00 	.
-	nop			;0fb8	00 	.
-	nop			;0fb9	00 	.
-	nop			;0fba	00 	.
-	nop			;0fbb	00 	.
-	nop			;0fbc	00 	.
-	nop			;0fbd	00 	.
-	nop			;0fbe	00 	.
-	nop			;0fbf	00 	.
-	nop			;0fc0	00 	.
-	nop			;0fc1	00 	.
-	nop			;0fc2	00 	.
-	nop			;0fc3	00 	.
-	nop			;0fc4	00 	.
-	nop			;0fc5	00 	.
-	nop			;0fc6	00 	.
-	nop			;0fc7	00 	.
-	nop			;0fc8	00 	.
-	nop			;0fc9	00 	.
-	nop			;0fca	00 	.
-	nop			;0fcb	00 	.
-	nop			;0fcc	00 	.
-	nop			;0fcd	00 	.
-	nop			;0fce	00 	.
-	nop			;0fcf	00 	.
-l0fd0h:
-	nop			;0fd0	00 	.
-	ld bc,01f80h		;0fd1	01 80 1f 	. . .
-	rra			;0fd4	1f 	.
-	rra			;0fd5	1f 	.
-	jr c,l0fd8h		;0fd6	38 00 	8 .
-l0fd8h:
-	nop			;0fd8	00 	.
-	add a,b			;0fd9	80 	.
-	nop			;0fda	00 	.
-	ld b,b			;0fdb	40 	@
-	ld bc,00200h		;0fdc	01 00 02 	. . .
-	ld (de),a			;0fdf	12 	.
-	nop			;0fe0	00 	.
-	rra			;0fe1	1f 	.
-	rra			;0fe2	1f 	.
-	rra			;0fe3	1f 	.
-	jr c,l0fe6h		;0fe4	38 00 	8 .
-l0fe6h:
-	nop			;0fe6	00 	.
-	jr nz,l0fe9h		;0fe7	20 00 	  .
-l0fe9h:
-	ld b,b			;0fe9	40 	@
-	nop			;0fea	00 	.
-	djnz l0fedh		;0feb	10 00 	. .
-l0fedh:
-	db 0, 0, 0
+	db "\r\nNOW IN TERMINAL MODE\r\n", '\n'|0x80
+
+; Blank
+	db 0, 0, 0, 0, 0, 0, 0, 0
+	db 0, 0, 0, 0, 0, 0, 0, 0
+	db 0, 0, 0, 0, 0, 0, 0, 0
+	db 0, 0, 0, 0, 0, 0, 0, 0
+
+
+; Sound table
+
+TONE1:
+	db 0x00, 0x01, 0x80, 0x1f, 0x1f, 0x1f, 0x38, 0x00
+	db 0x00, 0x80, 0x00, 0x40, 0x01, 0x00
+
+TONE2:
+	db 0x02, 0x12, 0x00, 0x1f, 0x1f, 0x1f, 0x38, 0x00
+	db 0x00, 0x20, 0x00, 0x40, 0x00, 0x10
+
+	db 0, 0, 0, 0
+
 	dw RESET
 	dw RESET
 	dw INTF4				; Interrupt F4
