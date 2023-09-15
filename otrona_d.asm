@@ -1,6 +1,8 @@
 ; z80dasm 1.1.6
 ; command line: z80dasm -l -t -g 0 -a Otrona_Attaché_U252_Rev_D.BIN
 
+; Note: in Mame, use ctrl-pagedown to get to monitor
+
 	org	00000h
 
 ; To avoid using stack a lot of code uses ix as the return address
@@ -93,8 +95,8 @@ STACK_BASE: equ $fe00
 
 
 RESET:
-	jp BOOT			; Called at boot
-	jp l062fh		;0003	c3 2f 06 	. / .
+	jp INIT			; Init machine
+	jp GOMON		; Go to monitor
 	jp l0865h		;0006	c3 65 08 	. e .
 	jp PRINTC
 	jp l090eh		;000c	c3 0e 09 	. . .
@@ -105,7 +107,7 @@ WELCOME_MSG:
 	db ('\n')|0x80		; LF (with bit 7 for end of string)
 
 	;   BOOT, we init the hardware
-BOOT:
+INIT:
 	di
 	ld hl,IOINITDATA	; I/O registers configuration table
 LOOP_IOREG:
@@ -219,6 +221,8 @@ OTHER_TEST:
 	ld sp,STACK_BASE	; Initial stack
 	ld hl,MEMMAP8TOF
 	CALLIX MAPMEM
+
+		;	Start Block test (FD00-FDFF)	
 	xor a			;00b8	af 	.
 	ld i,a		;00b9	ed 47 	. G
 	ld hl,0fd00h		;00bb	21 00 fd 	! . .
@@ -233,10 +237,14 @@ l00c0h:
 	jr c,l00c0h		;00c8	38 f6 	8 .
 	inc l			;00ca	2c 	,
 	jr nz,l00beh		;00cb	20 f1 	  .
+
+		;	Set initial values
 	cpl			;00cd	2f 	/
 	ld (0fd7ah),a		;00ce	32 7a fd 	2 z .
 	ld a,0c0h		;00d1	3e c0 	> .
 	ld (0fd82h),a		;00d3	32 82 fd 	2 . .
+
+		;	"Reinitialize display if 50Hz"
 	ld d,002h		;00d6	16 02 	. .
 	call sub_06cbh		;00d8	cd cb 06 	. . .
 	ld a,c			;00db	79 	y
@@ -251,15 +259,20 @@ l00c0h:
 	ld a,025h		;00ec	3e 25 	> %
 	out (DDSPY),a		;00ee	d3 fe 	. .
 l00f0h:
-	ld a,00fh		;00f0	3e 0f 	> .
-	ld i,a		;00f2	ed 47 	. G
-	im 2		;00f4	ed 5e 	. ^
-	ei			;00f6	fb 	.
+	ld a,00fh		; setup interrupt vector to 0x0f
+	ld i,a
+	im 2		; interrupt mode 2,
+			    ; CPU will jump at 0xfnn,
+				; with nn selected by the device during the Interrupt Response Cycle
+	ei			; enable interrupts
 	ld hl,WELCOME_MSG		;00f7	21 0f 00 	! . .
 	ld iy,l0101h		;00fa	fd 21 01 01 	. ! . .
 	jp DISP_HL		;00fe	c3 2c 07 	. , .
 l0101h:
-	jp l0a1bh		;0101	c3 1b 0a 	. . .
+	jp BOOT		;0101	c3 1b 0a 	. . .
+
+
+
 l0104h:
 	ld c,00dh		;0104	0e 0d 	. .
 	ld ix,l010dh		;0106	dd 21 0d 01 	. ! . .
@@ -347,10 +360,10 @@ l019ch:
 	jr nz,l01aah		;019e	20 0a 	  .
 	xor a			;01a0	af 	.
 	or b			;01a1	b0 	.
-	jp z,l062fh		;01a2	ca 2f 06 	. / .
+	jp z,GOMON		;01a2	ca 2f 06 	. / .
 	ex de,hl			;01a5	eb 	.
 	ld (hl),e			;01a6	73 	s
-	jp l062fh		;01a7	c3 2f 06 	. / .
+	jp GOMON		;01a7	c3 2f 06 	. / .
 l01aah:
 	cp 086h		;01aa	fe 86 	. .
 	jp z,l0a6eh		;01ac	ca 6e 0a 	. n .
@@ -517,7 +530,7 @@ l02a3h:
 l02a7h:
 	call sub_076dh		;02a7	cd 6d 07 	. m .
 	cp 05eh		;02aa	fe 5e 	. ^
-	jp z,l062fh		;02ac	ca 2f 06 	. / .
+	jp z,GOMON		;02ac	ca 2f 06 	. / .
 	ld c,a			;02af	4f 	O
 	call PRINTC
 	ld h,a			;02b3	67 	g
@@ -530,7 +543,7 @@ l02bch:
 	
 	ld a,0xff
 	ld (0fd80h),a		;02c2	32 80 fd 	2 . .
-	jp l062fh		;02c5	c3 2f 06 	. / .
+	jp GOMON		;02c5	c3 2f 06 	. / .
 l02c8h:
 	cp 'M'			;	Memory Map Test
 	jr nz,l031ah		;02ca	20 4e 	  N
@@ -579,7 +592,7 @@ l0310h:
 l031ah:
 	cp 'N'			; Mystery item. Warm boot?
 	jr nz,l0321h		;031c	20 03 	  .
-	jp l062fh		;031e	c3 2f 06 	. / .
+	jp GOMON		;031e	c3 2f 06 	. / .
 l0321h:
 	cp 'O'			; Output Test
 	jr nz,l032bh		;0323	20 06 	  .
@@ -590,7 +603,7 @@ l032bh:
 	cp 'P'			; Format Diskette
 	jr nz,l0335h		;032d	20 06 	  .
 	call sub_09b5h		;032f	cd b5 09 	. . .
-	jp l062fh		;0332	c3 2f 06 	. / .
+	jp GOMON		;0332	c3 2f 06 	. / .
 l0335h:
 	cp 'Q'			; CMOS Memory Test
 	jp nz,l036eh		;0337	c2 6e 03 	. n .
@@ -767,7 +780,7 @@ l043bh:
 	rrca			;044d	0f 	.
 	ld c,0f5h		;044e	0e f5 	. .
 	call sub_0456h		;0450	cd 56 04 	. V .
-	jp l062fh		;0453	c3 2f 06 	. / .
+	jp GOMON		;0453	c3 2f 06 	. / .
 sub_0456h:
 	and 00fh		;0456	e6 0f 	. .
 	ret z			;0458	c8 	.
@@ -1015,11 +1028,11 @@ l05f8h:
 	ld bc,00005h		;060d	01 05 00 	. . .
 	ldir		;0610	ed b0 	. .
 l0612h:
-	jp l062fh		;0612	c3 2f 06 	. / .
+	jp GOMON		;0612	c3 2f 06 	. / .
 l0615h:
 	ld c,03fh		;0615	0e 3f 	. ?
 	call sub_07e1h		;0617	cd e1 07 	. . .
-	jr l062fh		;061a	18 13 	. .
+	jr GOMON		;061a	18 13 	. .
 sub_061ch:
 	call sub_079ah		;061c	cd 9a 07 	. . .
 	ret z			;061f	c8 	.
@@ -1030,7 +1043,7 @@ l0627h:
 	ld a,000h		;0627	3e 00 	> .
 	ld (0fd80h),a		;0629	32 80 fd 	2 . .
 	ld (0fd81h),a		;062c	32 81 fd 	2 . .
-l062fh:
+GOMON:
 	ld sp,STACK_BASE		;062f	31 00 fe 	1 . .
 	jp l0104h		;0632	c3 04 01 	. . .
 
@@ -1518,7 +1531,7 @@ sub_0913h:
 	cp 017h		;0927	fe 17 	. .
 	ret m			;0929	f8 	.
 l092ah:
-	jp l062fh		;092a	c3 2f 06 	. / .
+	jp GOMON		;092a	c3 2f 06 	. / .
 sub_092dh:
 	push hl			;092d	e5 	.
 	ld hl,l0f0ah		;092e	21 0a 0f 	! . .
@@ -1655,7 +1668,8 @@ l0a12h:
 	ld h,000h		;0a16	26 00 	& .
 	jr z,l09c5h		;0a18	28 ab 	( .
 	ret			;0a1a	c9 	.
-l0a1bh:
+
+BOOT:
 	ld c,000h		;0a1b	0e 00 	. .
 	call sub_0a80h		;0a1d	cd 80 0a 	. . .
 	call l0909h		;0a20	cd 09 09 	. . .
@@ -1675,6 +1689,8 @@ l0a2fh:
 	jr nz,l0a56h		;0a44	20 10 	  .
 	ld a,(0fe03h)		;0a46	3a 03 fe 	: . .
 	cp 0a7h		;0a49	fe a7 	. .
+
+		;	Jumps to loaded code
 	jp z,STACK_BASE		;0a4b	ca 00 fe 	. . .
 	ld a,(0fd7bh)		;0a4e	3a 7b fd 	: { .
 	dec a			;0a51	3d 	=
@@ -2113,7 +2129,8 @@ sub_0cd7h:
 	otir
 	ret
 
-	; dead code?
+	; Interrupt 0xf4
+INTF4:
 	push hl			;0ced	e5 	.
 	push de			;0cee	d5 	.
 	push bc			;0cef	c5 	.
@@ -2196,6 +2213,7 @@ l0d73h:
 	pop hl			;0d76	e1 	.
 	ei			;0d77	fb 	.
 	reti		;0d78	ed 4d 	. M
+INTF6:
 	push hl			;0d7a	e5 	.
 	push de			;0d7b	d5 	.
 	push bc			;0d7c	c5 	.
@@ -2502,22 +2520,12 @@ l0fe9h:
 	nop			;0fea	00 	.
 	djnz l0fedh		;0feb	10 00 	. .
 l0fedh:
-	nop			;0fed	00 	.
-	nop			;0fee	00 	.
-	nop			;0fef	00 	.
-	nop			;0ff0	00 	.
-	nop			;0ff1	00 	.
-	nop			;0ff2	00 	.
-	nop			;0ff3	00 	.
-	defb 0edh;next byte illegal after ed		;0ff4	ed 	.
-	inc c			;0ff5	0c 	.
-	ld a,d			;0ff6	7a 	z
-	dec c			;0ff7	0d 	.
-	nop			;0ff8	00 	.
-	nop			;0ff9	00 	.
-	nop			;0ffa	00 	.
-	nop			;0ffb	00 	.
-	nop			;0ffc	00 	.
-	nop			;0ffd	00 	.
-	nop			;0ffe	00 	.
-	nop			;0fff	00 	.
+	db 0, 0, 0
+	dw RESET
+	dw RESET
+	dw INTF4				; Interrupt F4
+	dw INTF6				; INterrupt F6
+	dw RESET
+	dw RESET
+	dw RESET
+	dw RESET
