@@ -2169,37 +2169,35 @@ sub_0cd7h:
 	otir
 	ret
 
-	; Interrupt 0xf4
+	; Interrupt 0xf4 (60Hz)
 INTF4:
-	push hl			;0ced	e5 	.
-	push de			;0cee	d5 	.
-	push bc			;0cef	c5 	.
-	push af			;0cf0	f5 	.
-	in a,(DPIOB)		;0cf1	db fa 	. .
-	bit 6,a		;0cf3	cb 77 	. w
-	jr z,l0d49h		;0cf5	28 52 	( R
-	ld hl,CLICK		;0cf7	21 d0 0f 	! . .
-	push ix		;0cfa	dd e5 	. .
-	ld ix,l0d03h		;0cfc	dd 21 03 0d 	. ! . .
-	jp SOUND		;0d00	c3 40 07 	. @ .
-l0d03h:
-	pop ix		;0d03	dd e1 	. .
-	ld b,009h		;0d05	06 09 	. .
-l0d07h:
-	in a,(DPIOB)		;0d07	db fa 	. .
-	rlca			;0d09	07 	.
-	rlca			;0d0a	07 	.
-	ccf			;0d0b	3f 	?
-	rr l		;0d0c	cb 1d 	. .
-	ld a,07fh		;0d0e	3e 7f 	>
-	out (DPIOB),a		;0d10	d3 fa 	. .
-	ld a,0ffh		;0d12	3e ff 	> .
-	out (DPIOB),a		;0d14	d3 fa 	. .
-	djnz l0d07h		;0d16	10 ef 	. .
-	bit 6,l		;0d18	cb 75 	. u
-	jr z,l0d1eh		;0d1a	28 02 	( .
-	res 7,l		;0d1c	cb bd 	. .
-l0d1eh:
+	push hl
+	push de
+	push bc
+	push af
+	in a,(DPIOB)
+	bit 6,a			; Key pressed
+	jr z,l0d49h		; Nope
+	ld hl,CLICK
+	push ix
+	CALLIX SOUND	; 'click!'
+	pop ix
+	ld b,009h		; Perform 9 reads (first one is the start bit)
+.loop:
+	in a,(DPIOB)	; Read bit 6
+	rlca			; Move to bit 7
+	rlca			; Move to carry
+	ccf				; Invert
+	rr l			; Stuff it back into l
+	ld a,07fh		; Clock low
+	out (DPIOB),a	;
+	ld a,0ffh		; Clock high
+	out (DPIOB),a	;
+	djnz .loop		; Loop over data bits
+	bit 6,l			; If bit 6 is set...
+	jr z,.skip		; 
+	res 7,l			; ...clear bit 7
+.skip:
 	ld h,000h		;0d1e	26 00 	& .
 	ld de,KEYTBL		;0d20	11 4a 0e 	. J .
 	add hl,de			;0d23	19 	.
@@ -2223,6 +2221,8 @@ l0d41h:
 	ld (0fd78h),a		;0d41	32 78 fd 	2 x .
 	ld a,0ffh		;0d44	3e ff 	> .
 	ld (0fd79h),a		;0d46	32 79 fd 	2 y .
+
+		;	FLOPPY MOTOR SHUT-DOWN
 l0d49h:
 	ld hl,(0fd20h)		;0d49	2a 20 fd 	*   .
 	ld a,h			;0d4c	7c 	|
@@ -2253,6 +2253,8 @@ l0d73h:
 	pop hl			;0d76	e1 	.
 	ei			;0d77	fb 	.
 	reti		;0d78	ed 4d 	. M
+
+;	FLOPPY INTERRUPT ROUTINE
 INTF6:
 	push hl			;0d7a	e5 	.
 	push de			;0d7b	d5 	.
@@ -2421,7 +2423,7 @@ l0f1fh:
 	nop			;0f29	00 	.
 	ld (bc),a			;0f2a	02 	.
 	ld a,(bc)			;0f2b	0a 	.
-	ld e,0e5h		;0f2c	1e e5 	. .
+	ld e,0e5h		;0f2c	1e e5 	. . XXX
 	xor (hl)			;0f2e	ae 	.
 	add a,b			;0f2f	80 	.
 	ld b,b			;0f30	40 	@
