@@ -10,6 +10,10 @@ CALLIX: macro adrs
 		ld ix,$+7	; 4 bytes for ld ix, 3 bytes for jp
 		jp adrs
 	endm
+CALLIY: macro adrs
+		ld iy,$+7	; 4 bytes for ld iy, 3 bytes for jp
+		jp adrs
+	endm
 
 
 ;
@@ -99,8 +103,14 @@ DMAP:	equ 0ffh	;RAM VIRTUAL MAP DATA
 STACK_BASE: equ $fe00
 
 
+; Ctrl-Lf
+CTRLLF: equ 0x86
 
+; ASCII Constants
 
+BS: equ 0x08
+LF: equ 0x0A
+CR: equ 0x0D
 
 RESET:
 	jp INIT			; Init machine
@@ -109,7 +119,7 @@ RESET:
 	jp PRINTC
 	jp ERROR
 
-WELCOME_MSG:
+SIGNON:
 	db $1b, 'J'    	; ESC-J , probably erase to end of screen
     db "OTRONA ATTACHE\r", "\n"|0x80	; LF (with bit 7 for end of string)
 
@@ -163,13 +173,13 @@ PASSVALUE:		  ; passes a value (all 1s, then all 0s, through all the registers)
 	jr z,PASSVALUE		; should be zero, and a is now %00000000
 			; carry is not set, so we'll go to OTHER_TEST if everything is good
 
-BOOT_FAILED:
+CPUERR:
 	halt				; We failed to boot
 
 OTHER_TEST:
-	jr nz,BOOT_FAILED	; Second time, a should be zero
+	jr nz,CPUERR	; Second time, a should be zero
 	or a				; Test that "or 0" is 0.
-	jr nz,BOOT_FAILED
+	jr nz,CPUERR
 
 	;   Test the ix, iy, sp registers and dual byte additions/flags
 			; note: all registers are 0
@@ -182,7 +192,7 @@ OTHER_TEST:
 	ld sp,iy			;
 	add hl,sp			; $ffff
 	add hl,de			; $fffe
-	jr nc,BOOT_FAILED	; We clearly had a carry, right?
+	jr nc,CPUERR	; We clearly had a carry, right?
 
 	inc hl				; now $ffff
 	ld ix,0
@@ -197,32 +207,32 @@ OTHER_TEST:
 	inc hl				; $ffff
 	ld a,h				; $ff
 	xor l				; $ff^$ff = $00
-	jr nz,BOOT_FAILED	; if we did not land on zero, something wrong
+	jr nz,CPUERR	; if we did not land on zero, something wrong
 
 	;   Test basic flags behavior
 	ld a,$40
 	add a,a
-	jr z,BOOT_FAILED	; $80 is not 0
-	jr c,BOOT_FAILED	; $40+$40 does not create carry
-	jp p,BOOT_FAILED	; $80 is -128, so if positive, failed
-	jp po,BOOT_FAILED	; not overflow is tested (parity and overflow shares a flag)
+	jr z,CPUERR	; $80 is not 0
+	jr c,CPUERR	; $40+$40 does not create carry
+	jp p,CPUERR	; $80 is -128, so if positive, failed
+	jp po,CPUERR	; not overflow is tested (parity and overflow shares a flag)
 	add a,a				; $80+$80 = $00
-	jr nz,BOOT_FAILED	; Not zero? Fail
-	jr nc,BOOT_FAILED	; If no carry, fail
-	jp m,BOOT_FAILED	; If negative, fail
+	jr nz,CPUERR	; Not zero? Fail
+	jr nc,CPUERR	; If no carry, fail
+	jp m,CPUERR	; If negative, fail
 	or 1			; aka or a
-	jp pe,BOOT_FAILED	; parity is even? Fail
+	jp pe,CPUERR	; parity is even? Fail
 
 	;   Test decimal adjustment instruction
 	ld a,9
 	add a,1
 	daa		 ; decimal 10 adjusted to decimal
 	cp 010h			; is hex 10
-	jr nz,BOOT_FAILED	; or Fail
+	jr nz,CPUERR	; or Fail
 	sbc a,001h			; Carry was set to zero by daa, a is $f
 	daa				; hex f adjusted is 9
 	cp 9
-	jr nz,BOOT_FAILED	; not 9? Fail
+	jr nz,CPUERR	; not 9? Fail
 
 	;   (unsure)
 	ld sp,STACK_BASE	; Initial stack
@@ -272,27 +282,19 @@ l00f0h:
 			    ; CPU will jump at 0xfnn,
 				; with nn selected by the device during the Interrupt Response Cycle
 	ei			; enable interrupts
-	ld hl,WELCOME_MSG		;00f7	21 0f 00 	! . .
-	ld iy,l0101h		;00fa	fd 21 01 01 	. ! . .
-	jp DISP_HL		;00fe	c3 2c 07 	. , .
-l0101h:
+	ld hl,SIGNON
+	CALLIY DISP_HL
 	jp BOOT		;0101	c3 1b 0a 	. . .
 
 
 
 l0104h:
 	ld c,00dh		;0104	0e 0d 	. .
-	ld ix,l010dh		;0106	dd 21 0d 01 	. ! . .
-	jp l07e3h		;010a	c3 e3 07 	. . .
-l010dh:
+	CALLIX COIX
 	ld c,00ah		;010d	0e 0a 	. .
-	ld ix,l0116h		;010f	dd 21 16 01 	. ! . .
-	jp l07e3h		;0113	c3 e3 07 	. . .
-l0116h:
+	CALLIX COIX
 	ld c,040h		;0116	0e 40 	. @
-	ld ix,l011fh		;0118	dd 21 1f 01 	. ! . .
-	jp l07e3h		;011c	c3 e3 07 	. . .
-l011fh:
+	CALLIX COIX
 	ld de,0		;011f	11 00 00 	. . .
 	ld (0fd86h),de		;0122	ed 53 86 fd 	. S . .
 l0126h:
@@ -328,18 +330,14 @@ l0148h:
 	ld a,(0fd8fh)		;015c	3a 8f fd 	: . .
 	jr l017eh		;015f	18 1d 	. .
 l0161h:
-	ld iy,l0168h		;0161	fd 21 68 01 	. ! h .
-	jp l081ah		;0165	c3 1a 08 	. . .
-l0168h:
+	CALLIY l081ah
 	jr z,l0173h		;0168	28 09 	( .
 	xor a			;016a	af 	.
 	ld (KEYFLG),a		;016b	32 79 fd 	2 y .
 	ld a,(KEYCOD)		;016e	3a 78 fd 	: x .
 	jr l017eh		;0171	18 0b 	. .
 l0173h:
-	ld iy,l017ah		;0173	fd 21 7a 01 	. ! z .
-	jp l0790h		;0177	c3 90 07 	. . .
-l017ah:
+	CALLIY l0790h 
 	jr z,l0161h		;017a	28 e5 	( .
 	in a,(DCOMM)		;017c	db f0 	. .
 l017eh:
@@ -348,11 +346,9 @@ l017eh:
 	res 5,a		;0182	cb af 	. .
 l0184h:
 	ld c,a			;0184	4f 	O
-	ld ix,l018ch		;0185	dd 21 8c 01 	. ! . .
-	jp l07e3h		;0189	c3 e3 07 	. . .
-l018ch:
+	CALLIX COIX
 	ld (0fd8ah),a		;018c	32 8a fd 	2 . .
-	cp 008h		;018f	fe 08 	. .
+	cp BS
 	jr nz,l019ch		;0191	20 09 	  .
 	ex de,hl			;0193	eb 	.
 	xor a			;0194	af 	.
@@ -363,7 +359,7 @@ l0199h:
 	dec hl			;0199	2b 	+
 	jr l01bah		;019a	18 1e 	. .
 l019ch:
-	cp 00dh		;019c	fe 0d 	. .
+	cp CR
 	jr nz,l01aah		;019e	20 0a 	  .
 	xor a			;01a0	af 	.
 	or b			;01a1	b0 	.
@@ -372,9 +368,9 @@ l019ch:
 	ld (hl),e			;01a6	73 	s
 	jp GOMON		;01a7	c3 2f 06 	. / .
 l01aah:
-	cp 086h		;01aa	fe 86 	. .
-	jp z,l0a6eh		;01ac	ca 6e 0a 	. n .
-	cp 00ah		;01af	fe 0a 	. .
+	cp CTRLLF
+	jp z,GOTERM
+	cp LF
 	jr nz,l01dbh		;01b1	20 28 	  (
 	ex de,hl			;01b3	eb 	.
 	xor a			;01b4	af 	.
@@ -385,18 +381,12 @@ l01b9h:
 	inc hl			;01b9	23 	#
 l01bah:
 	ld c,00dh		;01ba	0e 0d 	. .
-	ld ix,l01c3h		;01bc	dd 21 c3 01 	. ! . .
-	jp l07e3h		;01c0	c3 e3 07 	. . .
-l01c3h:
-	ld iy,l01cah		;01c3	fd 21 ca 01 	. ! . .
-	jp l0698h		;01c7	c3 98 06 	. . .
-l01cah:
+	CALLIX COIX
+	CALLIY l0698h
 	ld a,h			;01ca	7c 	|
 	ld h,l			;01cb	65 	e
 	ld l,a			;01cc	6f 	o
-	ld iy,l01d4h		;01cd	fd 21 d4 01 	. ! . .
-	jp l0698h		;01d1	c3 98 06 	. . .
-l01d4h:
+	CALLIY l0698h
 	ld a,l			;01d4	7d 	}
 	ld l,h			;01d5	6c 	l
 	ld h,a			;01d6	67 	g
@@ -409,13 +399,9 @@ l01dbh:
 	ld d,h			;01e1	54 	T
 	ld e,l			;01e2	5d 	]
 	ld h,(hl)			;01e3	66 	f
-	ld iy,l01ebh		;01e4	fd 21 eb 01 	. ! . .
-	jp l0698h		;01e8	c3 98 06 	. . .
-l01ebh:
+	CALLIY l0698h
 	ld c,020h		;01eb	0e 20 	.
-	ld ix,l01f4h		;01ed	dd 21 f4 01 	. ! . .
-	jp l07e3h		;01f1	c3 e3 07 	. . .
-l01f4h:
+	CALLIX COIX
 	ld h,000h		;01f4	26 00 	& .
 	ld l,h			;01f6	6c 	l
 	jp l012ah		;01f7	c3 2a 01 	. * .
@@ -542,7 +528,7 @@ l02a7h:
 	call PRINTC
 	ld h,a			;02b3	67 	g
 	call sub_0696h		;02b4	cd 96 06 	. . .
-	call sub_07dfh		;02b7	cd df 07 	. . .
+	call SPACE
 	jr l02a7h		;02ba	18 eb 	. .
 l02bch:
 	cp 'L'			; Loop tests
@@ -582,12 +568,9 @@ l02f8h:
 	ld a,h			;02fd	7c 	|
 	or 030h		;02fe	f6 30 	. 0
 	ld c,a			;0300	4f 	O
-	ld ix,l0308h		;0301	dd 21 08 03 	. ! . .
-	jp l07e3h		;0305	c3 e3 07 	. . .
-l0308h:
+	CALLIX COIX
 	ld h,d			;0308	62 	b
-	ld iy,l0310h		;0309	fd 21 10 03 	. ! . .
-	jp l0698h		;030d	c3 98 06 	. . .
+	CALLIY l0698h		;030d	c3 98 06 	. . .
 l0310h:
 	inc b			;0310	04 	.
 	ld a,h			;0311	7c 	|
@@ -642,7 +625,7 @@ l0342h:
 l0363h:
 	ld h,d			;0363	62 	b
 	ld l,a			;0364	6f 	o
-	call sub_07dfh		;0365	cd df 07 	. . .
+	call SPACE
 	call sub_0692h		;0368	cd 92 06 	. . .
 l036bh:
 	jp l05f8h		;036b	c3 f8 05 	. . .
@@ -720,9 +703,7 @@ l03d2h:
 l03d9h:
 	ex af,af'			;03d9	08 	.
 	ld c,020h		;03da	0e 20 	.
-	ld ix,l03e3h		;03dc	dd 21 e3 03 	. ! . .
-	jp l07e3h		;03e0	c3 e3 07 	. . .
-l03e3h:
+	CALLIX COIX
 	ld iy,003eah		;03e3	fd 21 ea 03 	. ! . .
 	res 7,h		;03e7	cb bc 	. .
 	jp l0698h		;03e9	c3 98 06 	. . .
@@ -730,19 +711,13 @@ l03e3h:
 	ld a,h			;03ee	7c 	|
 	ld h,l			;03ef	65 	e
 	ld l,a			;03f0	6f 	o
-	ld iy,l03f8h		;03f1	fd 21 f8 03 	. ! . .
-	jp l0698h		;03f5	c3 98 06 	. . .
-l03f8h:
+	CALLIY l0698h		;03f5	c3 98 06 	. . .
 	ld c,02dh		;03f8	0e 2d 	. -
-	ld ix,l0401h		;03fa	dd 21 01 04 	. ! . .
-	jp l07e3h		;03fe	c3 e3 07 	. . .
-l0401h:
+	CALLIX COIX
 	ld a,h			;0401	7c 	|
 	ex af,af'			;0402	08 	.
 	ld h,a			;0403	67 	g
-	ld iy,l040bh		;0404	fd 21 0b 04 	. ! . .
-	jp l0698h		;0408	c3 98 06 	. . .
-l040bh:
+	CALLIY l0698h		;0408	c3 98 06 	. . .
 	ld h,l			;040b	65 	e
 	ex af,af'			;040c	08 	.
 	ld l,a			;040d	6f 	o
@@ -833,7 +808,7 @@ l04a0h:
 	ld (hl),000h		;04a0	36 00 	6 .
 	call sub_076dh		;04a2	cd 6d 07 	. m .
 	ld c,a			;04a5	4f 	O
-	call sub_07e1h		;04a6	cd e1 07 	. . .
+	call CO		;04a6	cd e1 07 	. . .
 	cp 00dh		;04a9	fe 0d 	. .
 	jr z,l04b1h		;04ab	28 04 	( .
 	ld (hl),a			;04ad	77 	w
@@ -1036,9 +1011,9 @@ l05f8h:
 l0612h:
 	jp GOMON		;0612	c3 2f 06 	. / .
 l0615h:
-	ld c,03fh		;0615	0e 3f 	. ?
-	call sub_07e1h		;0617	cd e1 07 	. . .
-	jr GOMON		;061a	18 13 	. .
+	ld c,'?'
+	call CO
+	jr GOMON
 sub_061ch:
 	call sub_079ah		;061c	cd 9a 07 	. . .
 	ret z			;061f	c8 	.
@@ -1094,23 +1069,24 @@ sub_065ah:
 l0678h:
 	ld d,h			;0678	54 	T
 	ret			;0679	c9 	.0f2c
+
 DELAY:
 	push bc
-l067bh:
+_L1:
 	push bc
-l067ch:
-	djnz l067ch
+_L2:
+	djnz _L2
 	pop bc
-	djnz l067bh
+	djnz _L1
 	pop bc
 	djnz DELAY
 	ret
 
 sub_0685h:
-	call sub_07dfh		;0685	cd df 07 	. . .
+	call SPACE
 	call sub_0692h		;0688	cd 92 06 	. . .
-	ld c,02dh		;068b	0e 2d 	. -
-	call sub_07e1h		;068d	cd e1 07 	. . .
+	ld c,'-'
+	call CO
 	ld h,d			;0690	62 	b
 	ld l,e			;0691	6b 	k
 sub_0692h:
@@ -1140,7 +1116,7 @@ l06ach:
 	add a,007h		;06b5	c6 07 	. .
 l06b7h:
 	ld c,a			;06b7	4f 	O
-	jp l07e3h		;06b8	c3 e3 07 	. . .
+	jp COIX		;06b8	c3 e3 07 	. . .
 sub_06bbh:
 	ld b,004h		;06bb	06 04 	. .
 l06bdh:
@@ -1230,9 +1206,7 @@ DISP_HL:
 	ld b,c
 	res 7,c			; clear bit 7
 	inc hl
-	ld ix,l0738h		;0731	dd 21 38 07 	. ! 8 .
-	jp l07e3h
-l0738h:
+	CALLIX COIX
 	bit 7,b		;	bit 7 => end of string
 	jr z,DISP_HL
 	jp (iy)
@@ -1252,46 +1226,42 @@ SOUND:
 	out (SPIOA),a
 
 	; no-op, strobe 138
-	ld a,0e3h ; 8910 data load
+	ld a,0xe3 ; 8910 data load
 	out (DPIOB),a
 
-	ld bc,00ef8h
-SNDLOOP:
+	ld bc,0x0ef8		; b=14, c=0xf8
+_L1:
 	dec b
 	out (c),b
 	inc b
 	; 8910 addr load & strobe
-	ld a,0c3h
+	ld a,0xc3
 	out (DPIOB),a
-	ld a,0e3h
+	ld a,0xe3
 	out (DPIOB),a
 	; send data
 	outi
 	; 8910 data load & strobe
-	ld a,0e7h
+	ld a,0xe7
 	out (DPIOB),a
-	ld a,0c7h
+	ld a,0xc7
 	out (DPIOB),a
-	ld a,0e7h
+	ld a,0xe7
 	out (DPIOB),a
-	jr nz,SNDLOOP
+	jr nz,_L1
 	jp (ix)
 
 sub_076dh:
 	pop ix		;076d	dd e1 	. .
 l076fh:
-	ld iy,l0776h		;076f	fd 21 76 07 	. ! v .
-	jp l081ah		;0773	c3 1a 08 	. . .
-l0776h:
+	CALLIY l081ah		;0773	c3 1a 08 	. . .
 	jr z,l0781h		;0776	28 09 	( .
 	xor a			;0778	af 	.
 	ld (KEYFLG),a		;0779	32 79 fd 	2 y .
 	ld a,(KEYCOD)		;077c	3a 78 fd 	: x .
 	jr l078ch		;077f	18 0b 	. .
 l0781h:
-	ld iy,l0788h		;0781	fd 21 88 07 	. ! . .
-	jp l0790h		;0785	c3 90 07 	. . .
-l0788h:
+	CALLIY l0790h		;0785	c3 90 07 	. . .
 	jr z,l076fh		;0788	28 e5 	( .
 	in a,(DCOMM)		;078a	db f0 	. .
 l078ch:
@@ -1342,11 +1312,12 @@ l07c7h:
 sub_07dbh:
 	pop ix		;07db	dd e1 	. .
 	jr l07ebh		;07dd	18 0c 	. .
-sub_07dfh:
-	ld c,020h		;07df	0e 20 	.
-sub_07e1h:
-	pop ix		;07e1	dd e1 	. .
-l07e3h:
+
+SPACE:
+	ld c,' '
+CO:		;	Character Out
+	pop ix
+COIX:
 	ld a,i		;07e3	ed 57 	. W
 	or a			;07e5	b7 	.
 	jr z,l07f2h		;07e6	28 0a 	( .
@@ -1379,7 +1350,8 @@ l0808h:
 	out (DCOMM),a		;0815	d3 f0 	. .
 l0817h:
 	ld a,c			;0817	79 	y
-	jp (ix)		;0818	dd e9 	. .
+	jp (ix)
+
 l081ah:
 	ld a,i		;081a	ed 57 	. W
 	or a			;081c	b7 	.
@@ -1388,43 +1360,49 @@ l081ah:
 	or a			;0822	b7 	.
 l0823h:
 	jp (iy)		;0823	fd e9 	. .
-l0825h:
-	xor a			;0825	af 	.
-	ld (KEYFLG),a		;0826	32 79 fd 	2 y .
-l0829h:
+
+
+; TERMINAL EMULATOR
+
+TERMNL:
+	xor a			; Clear input
+	ld (KEYFLG),a
+_T0:
 	call sub_078eh		;0829	cd 8e 07 	. . .
-	jr z,l0836h		;082c	28 08 	( .
-	in a,(DCOMM)		;082e	db f0 	. .
-	and 07fh		;0830	e6 7f 	.
-	ld c,a			;0832	4f 	O
-	call sub_07e1h		;0833	cd e1 07 	. . .
-l0836h:
+	jr z,_T1		;082c	28 08 	( .
+	in a,(DCOMM)
+	and 0x7f
+	ld c,a
+	call CO
+_T1:
 	ld a,(KEYFLG)		;0836	3a 79 fd 	: y .
-	or a			;0839	b7 	.
-	jr z,l0829h		;083a	28 ed 	( .
+	or a			;
+	jr z,_T0		; No key? loop
+
 	ld a,(KEYCOD)		;083c	3a 78 fd 	: x .
 	ld c,a			;083f	4f 	O
-	cp 086h		;0840	fe 86 	. .
-	jr nz,l0850h		;0842	20 0c 	  .
+	cp CTRLLF
+	jr nz,_T2		;0842	20 0c 	  .
 	di			;0844	f3 	.
 	ld sp,STACK_BASE		;0845	31 00 fe 	1 . .
 	xor a			;0848	af 	.
 	ld (KEYFLG),a		;0849	32 79 fd 	2 y .
 	ei			;084c	fb 	.
 	jp l0104h		;084d	c3 04 01 	. . .
-l0850h:
+_T2:
 	ld a,010h		;0850	3e 10 	> .
 	out (SCOMM),a		;0852	d3 f1 	. .
 	in a,(SCOMM)		;0854	db f1 	. .
 	and 004h		;0856	e6 04 	. .
-	jr z,l0829h		;0858	28 cf 	( .
+	jr z,_T0		;0858	28 cf 	( .
 	di			;085a	f3 	.
 	xor a			;085b	af 	.
 	ld (KEYFLG),a		;085c	32 79 fd 	2 y .
 	ei			;085f	fb 	.
 	ld a,c			;0860	79 	y
 	out (DCOMM),a		;0861	d3 f0 	. .
-	jr l0829h		;0863	18 c4 	. .
+	jr _T0
+
 DISKOP:
 	push hl			;0865	e5 	.
 	ld hl,(0fd20h)		;0866	2a 20 fd 	*   .
@@ -1741,7 +1719,9 @@ l0a56h:
 	ld hl,NODISK_MSG	;0a68	21 66 0f 	! f .
 l0a6bh:
 	call sub_072ah		;0a6b	cd 2a 07 	. * .
-l0a6eh:
+
+;	Launch terminal
+GOTERM:
 	ld hl,TERMINAL_MSG	;0a6e	21 97 0f 	! . .
 	call sub_072ah		;0a71	cd 2a 07 	. * .
 	di			;0a74	f3 	.
@@ -1749,7 +1729,8 @@ l0a6eh:
 	ld (KEYFLG),a		;0a76	32 79 fd 	2 y .
 	ld sp,STACK_BASE		;0a79	31 00 fe 	1 . .
 	ei			;0a7c	fb 	.
-	jp l0825h		;0a7d	c3 25 08 	. % .
+	jp TERMNL
+
 sub_0a80h:
 	ld b,00ah		;0a80	06 0a 	. .
 l0a82h:
@@ -1955,9 +1936,7 @@ l0b91h:
 	cp 007h		;0b91	fe 07 	. .
 	jr nz,l0ba3h		;0b93	20 0e 	  .
 	ld hl,BEEP		;0b95	21 de 0f 	! . .
-	ld ix,l0b9fh		;0b98	dd 21 9f 0b 	. ! . .
-	jp SOUND		;0b9c	c3 40 07 	. @ .
-l0b9fh:
+	CALLIX SOUND
 	ei			;0b9f	fb 	.
 	jp CLEARESC		;0ba0	c3 2d 0b 	. - .
 l0ba3h:
