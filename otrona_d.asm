@@ -10,9 +10,17 @@ CALLIX: macro adrs
 		ld ix,$+7	; 4 bytes for ld ix, 3 bytes for jp
 		jp adrs
 	endm
+RCALLIX: macro adrs
+		ld ix,$+6	; 4 bytes for ld ix, 2 bytes for jr
+		jr adrs
+	endm
 CALLIY: macro adrs
 		ld iy,$+7	; 4 bytes for ld iy, 3 bytes for jp
 		jp adrs
+	endm
+RCALLIY: macro adrs
+		ld iy,$+6	; 4 bytes for ld iy, 2 bytes for jr
+		jr adrs
 	endm
 
 
@@ -382,11 +390,11 @@ l01b9h:
 l01bah:
 	ld c,00dh		;01ba	0e 0d 	. .
 	CALLIX COIX
-	CALLIY l0698h
+	CALLIY DSH
 	ld a,h			;01ca	7c 	|
 	ld h,l			;01cb	65 	e
 	ld l,a			;01cc	6f 	o
-	CALLIY l0698h
+	CALLIY DSH
 	ld a,l			;01d4	7d 	}
 	ld l,h			;01d5	6c 	l
 	ld h,a			;01d6	67 	g
@@ -399,7 +407,7 @@ l01dbh:
 	ld d,h			;01e1	54 	T
 	ld e,l			;01e2	5d 	]
 	ld h,(hl)			;01e3	66 	f
-	CALLIY l0698h
+	CALLIY DSH
 	ld c,020h		;01eb	0e 20 	.
 	CALLIX COIX
 	ld h,000h		;01f4	26 00 	& .
@@ -570,7 +578,7 @@ l02f8h:
 	ld c,a			;0300	4f 	O
 	CALLIX COIX
 	ld h,d			;0308	62 	b
-	CALLIY l0698h		;030d	c3 98 06 	. . .
+	CALLIY DSH		;030d	c3 98 06 	. . .
 l0310h:
 	inc b			;0310	04 	.
 	ld a,h			;0311	7c 	|
@@ -706,18 +714,18 @@ l03d9h:
 	CALLIX COIX
 	ld iy,003eah		;03e3	fd 21 ea 03 	. ! . .
 	res 7,h		;03e7	cb bc 	. .
-	jp l0698h		;03e9	c3 98 06 	. . .
+	jp DSH		;03e9	c3 98 06 	. . .
 	set 7,h		;03ec	cb fc 	. .
 	ld a,h			;03ee	7c 	|
 	ld h,l			;03ef	65 	e
 	ld l,a			;03f0	6f 	o
-	CALLIY l0698h		;03f5	c3 98 06 	. . .
+	CALLIY DSH		;03f5	c3 98 06 	. . .
 	ld c,02dh		;03f8	0e 2d 	. -
 	CALLIX COIX
 	ld a,h			;0401	7c 	|
 	ex af,af'			;0402	08 	.
 	ld h,a			;0403	67 	g
-	CALLIY l0698h		;0408	c3 98 06 	. . .
+	CALLIY DSH		;0408	c3 98 06 	. . .
 	ld h,l			;040b	65 	e
 	ex af,af'			;040c	08 	.
 	ld l,a			;040d	6f 	o
@@ -1094,29 +1102,34 @@ sub_0692h:
 	ld h,l			;0695	65 	e
 sub_0696h:
 	pop iy		;0696	fd e1 	. .
-l0698h:
-	ld a,h			;0698	7c 	|
-	rlca			;0699	07 	.
-	rlca			;069a	07 	.
-	rlca			;069b	07 	.
-	rlca			;069c	07 	.
-	ld ix,l06a3h		;069d	dd 21 a3 06 	. ! . .
-	jr l06ach		;06a1	18 09 	. .
-l06a3h:
-	ld a,h			;06a3	7c 	|
-	ld ix,l06aah		;06a4	dd 21 aa 06 	. ! . .
-	jr l06ach		;06a8	18 02 	. .
-l06aah:
+
+
+;	DISPLAY H IN HEX
+;	(AC) [Y]
+DSH:
+	ld a,h
+	rlca
+	rlca
+	rlca
+	rlca
+	RCALLIX DSH1		;06a1	18 09 	. .
+	ld a,h
+	RCALLIX DSH1		;06a8	18 02 	. .
 	jp (iy)		;06aa	fd e9 	. .
-l06ach:
-	and 00fh		;06ac	e6 0f 	. .
-	add a,030h		;06ae	c6 30 	. 0
-	cp 03ah		;06b0	fe 3a 	. :
-	jp m,l06b7h		;06b2	fa b7 06 	. . .
-	add a,007h		;06b5	c6 07 	. .
-l06b7h:
-	ld c,a			;06b7	4f 	O
-	jp COIX		;06b8	c3 e3 07 	. . .
+
+;	DISPLAY H LOW NIBBLE IN HEX
+DSH1:
+	and 0x0f
+	add a,"0"
+	cp "9"+1
+	jp m,_DISP
+	add a,"A"-"9"-1
+_DISP:
+	ld c,a
+	jp COIX
+
+
+
 sub_06bbh:
 	ld b,004h		;06bb	06 04 	. .
 l06bdh:
