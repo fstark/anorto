@@ -2175,13 +2175,13 @@ INTF4:
 	push af
 	in a,(DPIOB)
 	bit 6,a			; Key pressed
-	jr z,.keydone	; Nope
+	jr z,_keydone	; Nope
 	ld hl,CLICK
 	push ix
 	CALLIX SOUND	; 'click!'
 	pop ix
 	ld b,009h		; Perform 9 reads (first one is the start bit)
-.loop:
+_loop:
 	in a,(DPIOB)	; Read bit 6
 	rlca			; Move to bit 7
 	rlca			; Move to carry
@@ -2191,37 +2191,37 @@ INTF4:
 	out (DPIOB),a	;
 	ld a,0ffh		; Clock high
 	out (DPIOB),a	;
-	djnz .loop		; Loop over data bits
+	djnz _loop		; Loop over data bits
 	bit 6,l			; If bit 6 is set...
-	jr z,.skip		; 
+	jr z,_skip		; 
 	res 7,l			; ...clear bit 7
-.skip:
+_skip:
 	ld h,0			; hl = l
 	ld de,KEYTBL
 	add hl,de		
 	ld a,(hl)		; key at KEYTBL+data
 	cp 0xfe			; Shift lock
 	ld a,(SHLOCK)
-	jr nz,.cont		; No shift, shlock
+	jr nz,_cont		; No shift, shlock
 	cpl				; Invert shif
 	ld (SHLOCK),a
-	jr .keydone
-.cont:
+	jr _keydone
+_cont:
 	or a			; Shift lock?
 	ld a,(hl)		; Get key again
-	jr z,.gotkey	; No shift lock, we're done 
+	jr z,_gotkey	; No shift lock, we're done 
 	cp 061h			; <'a'
-	jr c,.gotkey	; Less than 'a', we're done
+	jr c,_gotkey	; Less than 'a', we're done
 	cp 07bh			; >'z'
-	jp p,.gotkey	; More than 'z', we're done
+	jp p,_gotkey	; More than 'z', we're done
 	res 5,a			; Make uppercase
-.gotkey:
+_gotkey:
 	ld (KEYCOD),a	; We got a key
 	ld a,0xff
 	ld (KEYFLG),a	; And there is a key in the buffer
 
 		;	FLOPPY MOTOR SHUT-DOWN
-.keydone:
+_keydone:
 	ld hl,(0fd20h)		;0d49	2a 20 fd 	*   .
 	ld a,h			;0d4c	7c 	|
 	or l			;0d4d	b5 	.
