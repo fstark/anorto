@@ -25,12 +25,6 @@ FILBUF:	equ	0FE00H	; LOCATION OF DISK BUFFER
 
 
 
-ESCSEQ: equ 0xfd76		; Escape sequence in progress
-						; (maybe, could be set of flags)
-CURSOR: equ 0xfd22		; Cursor position row, column
-CURSORROW: equ 0xfd22	; Cursor row
-CURSORCOL: equ 0xfd23	; Cursor column
-
 ; I/O ports, see technical manual page 3-28 (table 3-13)
 FPYBCA: equ 0e0h	; FLOPPY STATUS PORT
 FPYBWR:	equ 0e1h	; FLOPPY DATA PORT
@@ -253,7 +247,7 @@ l00c0h:
 
 		;	Set initial values
 	cpl			;00cd	2f 	/
-	ld (0fd7ah),a		;00ce	32 7a fd 	2 z .
+	ld (SHLOCK),a		;00ce	32 7a fd 	2 z .
 	ld a,0c0h		;00d1	3e c0 	> .
 	ld (0fd82h),a		;00d3	32 82 fd 	2 . .
 
@@ -339,8 +333,8 @@ l0161h:
 l0168h:
 	jr z,l0173h		;0168	28 09 	( .
 	xor a			;016a	af 	.
-	ld (0fd79h),a		;016b	32 79 fd 	2 y .
-	ld a,(0fd78h)		;016e	3a 78 fd 	: x .
+	ld (KEYFLG),a		;016b	32 79 fd 	2 y .
+	ld a,(KEYCOD)		;016e	3a 78 fd 	: x .
 	jr l017eh		;0171	18 0b 	. .
 l0173h:
 	ld iy,l017ah		;0173	fd 21 7a 01 	. ! z .
@@ -1291,8 +1285,8 @@ l076fh:
 l0776h:
 	jr z,l0781h		;0776	28 09 	( .
 	xor a			;0778	af 	.
-	ld (0fd79h),a		;0779	32 79 fd 	2 y .
-	ld a,(0fd78h)		;077c	3a 78 fd 	: x .
+	ld (KEYFLG),a		;0779	32 79 fd 	2 y .
+	ld a,(KEYCOD)		;077c	3a 78 fd 	: x .
 	jr l078ch		;077f	18 0b 	. .
 l0781h:
 	ld iy,l0788h		;0781	fd 21 88 07 	. ! . .
@@ -1322,7 +1316,7 @@ l07a2h:
 l07aah:
 	jp (ix)		;07aa	dd e9 	. .
 sub_07ach:
-	ld a,(0fd79h)		;07ac	3a 79 fd 	: y .
+	ld a,(KEYFLG)		;07ac	3a 79 fd 	: y .
 	or a			;07af	b7 	.
 	jp nz,l0620h		;07b0	c2 20 06 	.   .
 	ld a,(0fd85h)		;07b3	3a 85 fd 	: . .
@@ -1390,13 +1384,13 @@ l081ah:
 	ld a,i		;081a	ed 57 	. W
 	or a			;081c	b7 	.
 	jr z,l0823h		;081d	28 04 	( .
-	ld a,(0fd79h)		;081f	3a 79 fd 	: y .
+	ld a,(KEYFLG)		;081f	3a 79 fd 	: y .
 	or a			;0822	b7 	.
 l0823h:
 	jp (iy)		;0823	fd e9 	. .
 l0825h:
 	xor a			;0825	af 	.
-	ld (0fd79h),a		;0826	32 79 fd 	2 y .
+	ld (KEYFLG),a		;0826	32 79 fd 	2 y .
 l0829h:
 	call sub_078eh		;0829	cd 8e 07 	. . .
 	jr z,l0836h		;082c	28 08 	( .
@@ -1405,17 +1399,17 @@ l0829h:
 	ld c,a			;0832	4f 	O
 	call sub_07e1h		;0833	cd e1 07 	. . .
 l0836h:
-	ld a,(0fd79h)		;0836	3a 79 fd 	: y .
+	ld a,(KEYFLG)		;0836	3a 79 fd 	: y .
 	or a			;0839	b7 	.
 	jr z,l0829h		;083a	28 ed 	( .
-	ld a,(0fd78h)		;083c	3a 78 fd 	: x .
+	ld a,(KEYCOD)		;083c	3a 78 fd 	: x .
 	ld c,a			;083f	4f 	O
 	cp 086h		;0840	fe 86 	. .
 	jr nz,l0850h		;0842	20 0c 	  .
 	di			;0844	f3 	.
 	ld sp,STACK_BASE		;0845	31 00 fe 	1 . .
 	xor a			;0848	af 	.
-	ld (0fd79h),a		;0849	32 79 fd 	2 y .
+	ld (KEYFLG),a		;0849	32 79 fd 	2 y .
 	ei			;084c	fb 	.
 	jp l0104h		;084d	c3 04 01 	. . .
 l0850h:
@@ -1426,7 +1420,7 @@ l0850h:
 	jr z,l0829h		;0858	28 cf 	( .
 	di			;085a	f3 	.
 	xor a			;085b	af 	.
-	ld (0fd79h),a		;085c	32 79 fd 	2 y .
+	ld (KEYFLG),a		;085c	32 79 fd 	2 y .
 	ei			;085f	fb 	.
 	ld a,c			;0860	79 	y
 	out (DCOMM),a		;0861	d3 f0 	. .
@@ -1752,7 +1746,7 @@ l0a6eh:
 	call sub_072ah		;0a71	cd 2a 07 	. * .
 	di			;0a74	f3 	.
 	xor a			;0a75	af 	.
-	ld (0fd79h),a		;0a76	32 79 fd 	2 y .
+	ld (KEYFLG),a		;0a76	32 79 fd 	2 y .
 	ld sp,STACK_BASE		;0a79	31 00 fe 	1 . .
 	ei			;0a7c	fb 	.
 	jp l0825h		;0a7d	c3 25 08 	. % .
@@ -1823,7 +1817,7 @@ l0abeh:
 	sbc a,018h		;0ac9	de 18 	. .
 l0acbh:
 	ld l,a			;0acb	6f 	o
-	ld a,(ESCSEQ)
+	ld a,(DSPCYC)
 	or a
 	jp nz,ESCAPE	; We're in an ESC sequence
 	ld a,c
@@ -1888,7 +1882,7 @@ l0b1ch:
 CLEARESC:
 	xor a
 STOREESC:
-	ld (ESCSEQ),a		;0b2e	32 76 fd 	2 v .
+	ld (DSPCYC),a		;0b2e	32 76 fd 	2 v .
 l0b31h:
 	pop af			;0b31	f1 	.
 	pop bc			;0b32	c1 	.
@@ -1991,7 +1985,7 @@ ESCAPE:
 	cp 03dh		;0bc4	fe 3d 	. =
 	jr nz,l0bcfh		;0bc6	20 07 	  .
 l0bc8h:
-	ld hl,ESCSEQ		;0bc8	21 76 fd 	! v .
+	ld hl,DSPCYC		;0bc8	21 76 fd 	! v .
 	inc (hl)			;0bcb	34 	4
 	jp l0b31h		;0bcc	c3 31 0b 	. 1 .
 l0bcfh:
@@ -2080,7 +2074,7 @@ l0c55h:
 	dec a			;0c55	3d 	=
 	jr nz,l0c6bh		;0c56	20 13 	  .
 	ld a,003h		;0c58	3e 03 	> .
-	ld (ESCSEQ),a		;0c5a	32 76 fd 	2 v .
+	ld (DSPCYC),a		;0c5a	32 76 fd 	2 v .
 	ld a,c			;0c5d	79 	y
 	sbc a,020h		;0c5e	de 20 	.
 	cp 018h		;0c60	fe 18 	. .
@@ -2169,7 +2163,11 @@ sub_0cd7h:
 	otir
 	ret
 
-	; Interrupt 0xf4 (60Hz)
+;|------------------------------|
+;| INTERRUPT SERVICE ROUTINES	|
+;|------------------------------|
+;
+;	50/60 HZ INTERRUPT (0xf4)
 INTF4:
 	push hl
 	push de
@@ -2177,7 +2175,7 @@ INTF4:
 	push af
 	in a,(DPIOB)
 	bit 6,a			; Key pressed
-	jr z,l0d49h		; Nope
+	jr z,.keydone	; Nope
 	ld hl,CLICK
 	push ix
 	CALLIX SOUND	; 'click!'
@@ -2198,32 +2196,32 @@ INTF4:
 	jr z,.skip		; 
 	res 7,l			; ...clear bit 7
 .skip:
-	ld h,000h		;0d1e	26 00 	& .
-	ld de,KEYTBL		;0d20	11 4a 0e 	. J .
-	add hl,de			;0d23	19 	.
-	ld a,(hl)			;0d24	7e 	~
-	cp 0feh		;0d25	fe fe 	. .
-	ld a,(0fd7ah)		;0d27	3a 7a fd 	: z .
-	jr nz,l0d32h		;0d2a	20 06 	  .
-	cpl			;0d2c	2f 	/
-	ld (0fd7ah),a		;0d2d	32 7a fd 	2 z .
-	jr l0d49h		;0d30	18 17 	. .
-l0d32h:
-	or a			;0d32	b7 	.
-	ld a,(hl)			;0d33	7e 	~
-	jr z,l0d41h		;0d34	28 0b 	( .
-	cp 061h		;0d36	fe 61 	. a
-	jr c,l0d41h		;0d38	38 07 	8 .
-	cp 07bh		;0d3a	fe 7b 	. {
-	jp p,l0d41h		;0d3c	f2 41 0d 	. A .
-	res 5,a		;0d3f	cb af 	. .
-l0d41h:
-	ld (0fd78h),a		;0d41	32 78 fd 	2 x .
-	ld a,0ffh		;0d44	3e ff 	> .
-	ld (0fd79h),a		;0d46	32 79 fd 	2 y .
+	ld h,0			; hl = l
+	ld de,KEYTBL
+	add hl,de		
+	ld a,(hl)		; key at KEYTBL+data
+	cp 0xfe			; Shift lock
+	ld a,(SHLOCK)
+	jr nz,.cont		; No shift, shlock
+	cpl				; Invert shif
+	ld (SHLOCK),a
+	jr .keydone
+.cont:
+	or a			; Shift lock?
+	ld a,(hl)		; Get key again
+	jr z,.gotkey	; No shift lock, we're done 
+	cp 061h			; <'a'
+	jr c,.gotkey	; Less than 'a', we're done
+	cp 07bh			; >'z'
+	jp p,.gotkey	; More than 'z', we're done
+	res 5,a			; Make uppercase
+.gotkey:
+	ld (KEYCOD),a	; We got a key
+	ld a,0xff
+	ld (KEYFLG),a	; And there is a key in the buffer
 
 		;	FLOPPY MOTOR SHUT-DOWN
-l0d49h:
+.keydone:
 	ld hl,(0fd20h)		;0d49	2a 20 fd 	*   .
 	ld a,h			;0d4c	7c 	|
 	or l			;0d4d	b5 	.
@@ -2490,8 +2488,27 @@ BEEP:
 	dw RESET
 	dw RESET
 	dw INTF4				; Interrupt F4
-	dw INTF6				; INterrupt F6
+	dw INTF6				; Interrupt F6
 	dw RESET
 	dw RESET
 	dw RESET
 	dw RESET
+
+; HIGH MEMORY VARIABLES
+CURSOR: equ 0xfd22		; Cursor position row, column
+CURSORROW: equ 0xfd22	; Cursor row
+CURSORCOL: equ 0xfd23	; Cursor column
+
+DSPCYC: equ 0xfd76		; DISPLAY CYCLE COUNTER
+			;	0 = NORMAL CHAR
+			;	1 = ESC PENDING
+			;	2 = LINE # PNDG.
+			;	3 = CHAR # PNDG.
+			;	4 = ATTRIBUTE PNDG.
+			;	5 = CHARACTER SET PNDG.
+ 		    ;	6 = LEAD-IN PENDING
+
+KEYCOD: equ 0fd78h		; Key code
+KEYFLG: equ 0fd79h		; Key flag (FF = KEY WAITING)
+SHLOCK: equ 0fd7ah		; Shift lock
+
