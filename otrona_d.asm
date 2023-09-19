@@ -111,7 +111,7 @@ RESET:
 
 WELCOME_MSG:
 	db $1b, 'J'    	; ESC-J , probably erase to end of screen
-    db 'OTRONA ATTACHE\r', '\n'|0x80	; LF (with bit 7 for end of string)
+    db "OTRONA ATTACHE\r", "\n"|0x80	; LF (with bit 7 for end of string)
 
 	;   BOOT, we init the hardware
 INIT:
@@ -2170,7 +2170,7 @@ sub_0cd7h:
 ;	50/60 HZ INTERRUPT (0xf4)
 INTF4:
 	push hl
-	push de
+	push de 
 	push bc
 	push af
 	in a,(DPIOB)
@@ -2460,11 +2460,11 @@ MEMMAP8TOF:
 UNITSEQ:
 	db "HQTMR1R2R3RZ1Z", 0
 NODISK_MSG:
-	db "\r\nNO DISK OR DISK NOT READABL", 'E'|0x80
+	db "\r\nNO DISK OR DISK NOT READABL", "E"|0x80
 NOSYS_MSG:
-	db "\r\nNO SYSTEM ON DIS", 'K'|0x80
+	db "\r\nNO SYSTEM ON DIS", "K"|0x80
 TERMINAL_MSG:
-	db "\r\nNOW IN TERMINAL MODE\r\n", '\n'|0x80
+	db "\r\nNOW IN TERMINAL MODE\r\n", "\n"|0x80
 
 ; Blank
 	db 0, 0, 0, 0, 0, 0, 0, 0
