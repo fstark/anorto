@@ -267,7 +267,7 @@ l00c0h:
 	cpl			;00cd	2f 	/
 	ld (SHLOCK),a		;00ce	32 7a fd 	2 z .
 	ld a,0c0h		;00d1	3e c0 	> .
-	ld (0fd82h),a		;00d3	32 82 fd 	2 . .
+	ld (LSTATE),a		;00d3	32 82 fd 	2 . .
 
 		;	"Reinitialize display if 50Hz"
 	ld d,002h		;00d6	16 02 	. .
@@ -345,7 +345,7 @@ l0161h:
 	ld a,(KEYCOD)		;016e	3a 78 fd 	: x .
 	jr l017eh		;0171	18 0b 	. .
 l0173h:
-	CALLIY l0790h 
+	CALLIY l0790h
 	jr z,l0161h		;017a	28 e5 	( .
 	in a,(DCOMM)		;017c	db f0 	. .
 l017eh:
@@ -1418,11 +1418,11 @@ _T2:
 
 DISKOP:
 	push hl			;0865	e5 	.
-	ld hl,(0fd20h)		;0866	2a 20 fd 	*   .
+	ld hl,(MTRCNT)		;0866	2a 20 fd 	*   .
 	ld a,h			;0869	7c 	|
 	or l			;086a	b5 	.
 	push af			;086b	f5 	.
-	ld a,(0fd82h)		;086c	3a 82 fd 	: . .
+	ld a,(LSTATE)		;086c	3a 82 fd 	: . .
 	set 0,a		;086f	cb c7 	. .
 	ld bc,0fbfah		;0871	01 fa fb 	. . .
 	push af			;0874	f5 	.
@@ -1440,13 +1440,13 @@ DISKOP:
 	out (c),b		;0888	ed 41 	. A
 	ei			;088a	fb 	.
 	ld hl,l012ch		;088b	21 2c 01 	! , .
-	ld (0fd20h),hl		;088e	22 20 fd 	"   .
+	ld (MTRCNT),hl		;088e	22 20 fd 	"   .
 	pop af			;0891	f1 	.
 	jr nz,l08a0h		;0892	20 0c 	  .
 	scf			;0894	37 	7
 	ld de,00100h		;0895	11 00 01 	. . .
 l0898h:
-	ld hl,(0fd20h)		;0898	2a 20 fd 	*   .
+	ld hl,(MTRCNT)		;0898	2a 20 fd 	*   .
 	sbc hl,de		;089b	ed 52 	. R
 	jp p,l0898h		;089d	f2 98 08 	. . .
 l08a0h:
@@ -1568,7 +1568,7 @@ l0943h:
 	ld (0fd13h),a		;094d	32 13 fd 	2 . .
 	res 2,a		;0950	cb 97 	. .
 	ld (0fd10h),a		;0952	32 10 fd 	2 . .
-	ld a,(0fd1fh)		;0955	3a 1f fd 	: . .
+	ld a,(HOMES)		;0955	3a 1f fd 	: . .
 	bit 4,l		;0958	cb 65 	. e
 	jr nz,l0964h		;095a	20 08 	  .
 	bit 0,a		;095c	cb 47 	. G
@@ -1580,7 +1580,7 @@ l0964h:
 	set 1,a		;0966	cb cf 	. .
 	jr nz,l0980h		;0968	20 16 	  .
 l096ah:
-	ld (0fd1fh),a		;096a	32 1f fd 	2 . .
+	ld (HOMES),a		;096a	32 1f fd 	2 . .
 	push hl			;096d	e5 	.
 	ld hl,0fd0eh		;096e	21 0e fd 	! . .
 	push hl			;0971	e5 	.
@@ -2162,12 +2162,12 @@ sub_0cd7h:
 ;	50/60 HZ INTERRUPT (0xf4)
 INTF4:
 	push hl
-	push de 
+	push de
 	push bc
 	push af
 	in a,(DPIOB)
 	bit 6,a			; Key pressed
-	jr z,_keydone	; Nope
+	jr z,_floppytimer	; Nope
 	ld hl,CLICK
 	push ix
 	CALLIX SOUND	; 'click!'
@@ -2185,23 +2185,23 @@ _loop:
 	out (DPIOB),a	;
 	djnz _loop		; Loop over data bits
 	bit 6,l			; If bit 6 is set...
-	jr z,_skip		; 
+	jr z,_skip		;
 	res 7,l			; ...clear bit 7
 _skip:
 	ld h,0			; hl = l
 	ld de,KEYTBL
-	add hl,de		
+	add hl,de
 	ld a,(hl)		; key at KEYTBL+data
 	cp 0xfe			; Shift lock
 	ld a,(SHLOCK)
 	jr nz,_cont		; No shift, shlock
 	cpl				; Invert shif
 	ld (SHLOCK),a
-	jr _keydone
+	jr _floppytimer
 _cont:
 	or a			; Shift lock?
 	ld a,(hl)		; Get key again
-	jr z,_gotkey	; No shift lock, we're done 
+	jr z,_gotkey	; No shift lock, we're done
 	cp 061h			; <'a'
 	jr c,_gotkey	; Less than 'a', we're done
 	cp 07bh			; >'z'
@@ -2213,30 +2213,37 @@ _gotkey:
 	ld (KEYFLG),a	; And there is a key in the buffer
 
 		;	FLOPPY MOTOR SHUT-DOWN
-_keydone:
-	ld hl,(0fd20h)		;0d49	2a 20 fd 	*   .
-	ld a,h			;0d4c	7c 	|
-	or l			;0d4d	b5 	.
-	jr nz,l0d6fh		;0d4e	20 1f 	  .
-	ld a,0cfh		;0d50	3e cf 	> .
-	out (SPIOA),a		;0d52	d3 f9 	. .
-	xor a			;0d54	af 	.
-	ld (0fd1fh),a		;0d55	32 1f fd 	2 . .
-	out (SPIOA),a		;0d58	d3 f9 	. .
-	ld a,(0fd82h)		;0d5a	3a 82 fd 	: . .
-	res 0,a		;0d5d	cb 87 	. .
-	out (DPIOA),a		;0d5f	d3 f8 	. .
-	ld bc,0fbfah		;0d61	01 fa fb 	. . .
-	out (c),b		;0d64	ed 41 	. A
-	res 5,b		;0d66	cb a8 	. .
-	out (c),b		;0d68	ed 41 	. A
-	set 5,b		;0d6a	cb e8 	. .
-	out (c),b		;0d6c	ed 41 	. A
-	inc hl			;0d6e	23 	#
-l0d6fh:
-	dec hl			;0d6f	2b 	+
-	ld (0fd20h),hl		;0d70	22 20 fd 	"   .
-l0d73h:
+_floppytimer:
+	ld hl,(MTRCNT)		; Get motor timer
+	ld a,h
+	or l
+	jr nz,_end		; If <> 0 then decrement & exit
+
+	; PIO Port A: bit mode & every line as output
+	ld a,0cfh
+	out (SPIOA),a
+	xor a
+	ld (HOMES),a	; Clear homes
+	out (SPIOA),a
+
+	ld a,(LSTATE)	; Always 0xC0 = motor on + graphics enable
+	res 0,a		; Clear motor on
+	out (DPIOA),a
+
+	; DPIOB: Latch load & operation stobe
+	ld bc,0fbfah
+	out (c),b
+	res 5,b
+	out (c),b
+	set 5,b
+	out (c),b
+	inc hl ; Keep at zero. Will motor shutdown be spammed?
+_end:
+	dec hl
+	ld (MTRCNT),hl
+
+; Common interrupt exit
+IEND:
 	pop af			;0d73	f1 	.
 	pop bc			;0d74	c1 	.
 	pop de			;0d75	d1 	.
@@ -2264,7 +2271,7 @@ l0d8eh:
 	inc hl			;0d93	23 	#
 	pop bc			;0d94	c1 	.
 	djnz l0d8eh		;0d95	10 f7 	. .
-	jr l0d73h		;0d97	18 da 	. .
+	jr IEND		;0d97	18 da 	. .
 l0d99h:
 	ld c,008h		;0d99	0e 08 	. .
 	call SEND_FDC_CMD
@@ -2273,12 +2280,12 @@ l0d99h:
 	bit 7,a		;0da3	cb 7f 	.
 	jr z,l0dabh		;0da5	28 04 	( .
 	bit 6,a		;0da7	cb 77 	. w
-	jr z,l0d73h		;0da9	28 c8 	( .
+	jr z,IEND		;0da9	28 c8 	( .
 l0dabh:
 	ld (0fd15h),a		;0dab	32 15 fd 	2 . .
 	call READ_FDC_REG	;0dae	cd a5 0a 	. . .
 	ld (0fd18h),a		;0db1	32 18 fd 	2 . .
-	jr l0d73h		;0db4	18 bd 	. .
+	jr IEND		;0db4	18 bd 	. .
 
 IOINITDATA:
 	; CTRC (TMS9927 = CRT5027) init
@@ -2500,7 +2507,14 @@ DSPCYC: equ 0xfd76		; DISPLAY CYCLE COUNTER
 			;	5 = CHARACTER SET PNDG.
  		    ;	6 = LEAD-IN PENDING
 
+; OTHER FLOPPY VARIABLES
+HOMES: equ 0fd1fh		; Home flags (not sure what it means)
+MTRCNT: equ 0fd20h		; Floppy motor timer
+
+; KEYBOARD VARIABLES
 KEYCOD: equ 0fd78h		; Key code
 KEYFLG: equ 0fd79h		; Key flag (FF = KEY WAITING)
 SHLOCK: equ 0fd7ah		; Shift lock
 
+; MISC. VARIABLES
+LSTATE: equ 0fd82h		;L0-L7 STATE
