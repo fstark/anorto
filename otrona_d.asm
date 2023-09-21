@@ -124,7 +124,7 @@ RESET:
 	jp INIT			; Init machine
 	jp GOMON		; Go to monitor
 	jp DISKOP
-	jp PRINTC
+	jp DISPLY
 	jp ERROR
 
 SIGNON:
@@ -415,47 +415,47 @@ LFRET:
 	jr ECHO
 
 CSLASH:				; / = Open and display
-	cp 02fh		;01db	fe 2f 	. /
-	jr nz,l01fah		;01dd	20 1b 	  .
-	ld b,000h		;01df	06 00 	. .
-	ld d,h			;01e1	54 	T
-	ld e,l			;01e2	5d 	]
-	ld h,(hl)			;01e3	66 	f
+	cp '/'
+	jr nz,CSPC
+	ld b,0
+	ld d,h
+	ld e,l
+	ld h,(hl)		; Display memort
 	CALLIY DSH
-	ld c,020h		;01eb	0e 20 	.
+	ld c,' '
 	CALLIX COIX
-	ld h,000h		;01f4	26 00 	& .
-	ld l,h			;01f6	6c 	l
-	jp l012ah		;01f7	c3 2a 01 	. * .
-l01fah:
-	cp 020h		;01fa	fe 20 	.
-	jr nz,DIAGNOSTICS		;01fc	20 07 	  .
-	ld (SAVDE),hl		;01fe	22 86 fd 	" . .
-	ex de,hl			;0201	eb 	.
+	ld h,0
+	ld l,h
+	jp l012ah
+
+CSPC:				; Unsure what it does, to be honest
+	cp ' '
+	jr nz,CGRAPH
+	ld (SAVDE),hl		;	Unsure why
+	ex de,hl
 	jp MNTR2
 
-DIAGNOSTICS:
+CGRAPH:
 	cp 'G'          ; Generate Display Pattern
-	jr nz,DIAGNOSTICS_H
+	jr nz,CALPHA
 
-; Description:The display screen fills with the character "+" in every
-; position of the display except the cursor position (the
-; lower right hand corner).
-; Exit:Press any key to return Attache to the
-; entry mode.
-; Reporting:No errors are detected or reported.
-
-	ld c,01eh		; #### Sounds we want to write 0x1e (RS)
-	call PRINTC
+;
+;	G - PRESENT DISPLAY TEST PATTERN
+;	& PROVIDE CLOCK SET-UP OUTPUT
+;
+	ld c,0x1e		; HOME
+	call DISPLY
 	ld de,2175
 	ld c,'+'
 		; loop 2175 times
-l0213h:
-	call PRINTC
+_L1:
+	call DISPLY
 	dec e
-	jr nz,l0213h
+	jr nz,_L1
 	dec d
-	jr nz,l0213h
+	jr nz,_L1
+
+
 	call sub_065ah		;021c	cd 5a 06 	. Z .
 	bit 7,d		;021f	cb 7a 	. z
 	jr z,l0236h		;0221	28 13 	( .
@@ -476,7 +476,7 @@ l0236h:
 	call ABTTST		;023c	cd 1c 06 	. . .
 	jr l0236h		;023f	18 f5 	. .
 
-DIAGNOSTICS_H:
+CALPHA:
 	cp 'H'          ; Display RAM test
 	jr nz,l028dh		;0243	20 48 	  H
 	ld e,000h		;0245	1e 00 	. .
@@ -548,7 +548,7 @@ l02a7h:
 	cp 05eh		;02aa	fe 5e 	. ^
 	jp z,GOMON		;02ac	ca 2f 06 	. / .
 	ld c,a			;02af	4f 	O
-	call PRINTC
+	call DISPLY
 	ld h,a			;02b3	67 	g
 	call sub_0696h		;02b4	cd 96 06 	. . .
 	call SPACE
@@ -1398,7 +1398,7 @@ COIX:
 	ld a,i		;07e3	ed 57 	. W
 	or a			;07e5	b7 	.
 	jr z,l07f2h		;07e6	28 0a 	( .
-	call PRINTC
+	call DISPLY
 l07ebh:
 	ld a,(0fd85h)		;07eb	3a 85 fd 	: . .
 	bit 4,a		;07ee	cb 67 	. g
@@ -1861,7 +1861,7 @@ l0ab6h:
 
 
 	;	Prints the char in C, interpreting escape codes
-PRINTC:
+DISPLY:
 	push hl
 	push de
 	push bc
