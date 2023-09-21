@@ -15,7 +15,7 @@ while true; do
             hexdump Otrona_Attaché_U252_Rev_D.BIN > /tmp/a.hex
             hexdump otrona_d.bin > /tmp/b.hex
             # git diff -U0  --no-index --no-prefix --word-diff=plain --word-diff --word-diff-regex=. /tmp/a.hex /tmp/b.hex
-            diff /tmp/a.xxd /tmp/b.xxd | head -10
+            diff /tmp/a.hex /tmp/b.hex | head -10
         else
             cp otrona_d.asm otrona_d_lastgood.asm
         fi
