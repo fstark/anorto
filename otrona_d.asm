@@ -247,43 +247,44 @@ OTHER_TEST:
 	ld hl,MEMMAP8TOF
 	CALLIX MAPMEM
 
-		;	Start Block test (FD00-FDFF)
-	xor a			;00b8	af 	.
-	ld i,a		;00b9	ed 47 	. G
-	ld hl,0fd00h		;00bb	21 00 fd 	! . .
-l00beh:
-	ld c,0ffh		;00be	0e ff 	. .
-l00c0h:
-	ld (hl),c			;00c0	71 	q
-	ld a,c			;00c1	79 	y
-	xor (hl)			;00c2	ae 	.
-	jp nz,l03d9h		;00c3	c2 d9 03 	. . .
-	sla c		;00c6	cb 21 	. !
-	jr c,l00c0h		;00c8	38 f6 	8 .
-	inc l			;00ca	2c 	,
-	jr nz,l00beh		;00cb	20 f1 	  .
+	xor a
+	ld i,a
 
-		;	Set initial values
-	cpl			;00cd	2f 	/
-	ld (SHLOCK),a		;00ce	32 7a fd 	2 z .
-	ld a,0c0h		;00d1	3e c0 	> .
-	ld (LSTATE),a		;00d3	32 82 fd 	2 . .
+		;	Start Block test (FD00-FDFF)
+	ld hl,0fd00h
+_L1:
+	ld c,0ffh			; Store ff, 7f, 3f, ... 03, 01 in memory
+_L2:
+	ld (hl),c			; Store c
+	ld a,c
+	xor (hl)			; Invert
+	jp nz,MEMERR		; Should be 00
+	sla c				;
+	jr c,_L2			;
+	inc l				; next byte
+	jr nz,_L1
+
+			;	Set initial values
+	cpl
+	ld (SHLOCK),a		; No shift-lock
+	ld a,0c0h
+	ld (LSTATE),a		; Initial LSTATE
 
 		;	"Reinitialize display if 50Hz"
-	ld d,002h		;00d6	16 02 	. .
-	call sub_06cbh		;00d8	cd cb 06 	. . .
-	ld a,c			;00db	79 	y
-	cp 009h		;00dc	fe 09 	. .
-	jr nz,l00f0h		;00de	20 10 	  .
-	ld a,0a4h		;00e0	3e a4 	> .
-	out (SDSPY),a		;00e2	d3 ee 	. .
-	ld a,01dh		;00e4	3e 1d 	> .
-	out (DDSPY),a		;00e6	d3 fe 	. .
-	ld a,0a5h		;00e8	3e a5 	> .
-	out (SDSPY),a		;00ea	d3 ee 	. .
-	ld a,025h		;00ec	3e 25 	> %
-	out (DDSPY),a		;00ee	d3 fe 	. .
-l00f0h:
+	ld d,2
+	call RDCMOS		; Read adress 2 (50Hz flag)
+	ld a,c
+	cp 9
+	jr nz,_J0		;	No 50Hz?
+	ld a,0xa4		; (unclear)
+	out (SDSPY),a	;
+	ld a,0x01d		;
+	out (DDSPY),a	;
+	ld a,0xa5		;
+	out (SDSPY),a	;
+	ld a,0x25		;
+	out (DDSPY),a	;
+_J0:
 	ld a,00fh		; setup interrupt vector to 0x0f
 	ld i,a
 	im 2		; interrupt mode 2,
@@ -292,30 +293,31 @@ l00f0h:
 	ei			; enable interrupts
 	ld hl,SIGNON
 	CALLIY DISP_HL
-	jp BOOT		;0101	c3 1b 0a 	. . .
+	jp BOOT
 
 
 
-l0104h:
-	ld c,00dh		;0104	0e 0d 	. .
+MNTR:
+	ld c,"\r"
 	CALLIX COIX
-	ld c,00ah		;010d	0e 0a 	. .
+	ld c,"\n"
 	CALLIX COIX
-	ld c,040h		;0116	0e 40 	. @
+	ld c,'@'
 	CALLIX COIX
-	ld de,0		;011f	11 00 00 	. . .
-	ld (0fd86h),de		;0122	ed 53 86 fd 	. S . .
-l0126h:
-	ld h,000h		;0126	26 00 	& .
-	ld l,h			;0128	6c 	l
-	ld b,h			;0129	44 	D
+	ld de,0
+	ld (SAVDE),de
+
+MNTR2:
+	ld h,0
+	ld l,h
+	ld b,h
 l012ah:
 	ld a,i		;012a	ed 57 	. W
 l012ch:
 	or a			;012c	b7 	.
 	jr z,l0173h		;012d	28 44 	( D
-	call sub_061ch		;012f	cd 1c 06 	. . .
-	ld a,(0fd81h)		;0132	3a 81 fd 	: . .
+	call ABTTST		;012f	cd 1c 06 	. . .
+	ld a,(FLGCMD)		;0132	3a 81 fd 	: . .
 	or a			;0135	b7 	.
 	jr z,l0148h		;0136	28 10 	( .
 	push hl			;0138	e5 	.
@@ -326,9 +328,9 @@ l012ch:
 	pop hl			;0141	e1 	.
 	or a			;0142	b7 	.
 	jr nz,l017eh		;0143	20 39 	  9
-	ld (0fd81h),a		;0145	32 81 fd 	2 . .
+	ld (FLGCMD),a		;0145	32 81 fd 	2 . .
 l0148h:
-	ld a,(0fd80h)		;0148	3a 80 fd 	: . .
+	ld a,(FLGLOP)		;0148	3a 80 fd 	: . .
 	cp 080h		;014b	fe 80 	. .
 	jr nz,l0161h		;014d	20 12 	  .
 	ld hl,0fd83h		;014f	21 83 fd 	! . .
@@ -416,9 +418,10 @@ l01dbh:
 l01fah:
 	cp 020h		;01fa	fe 20 	.
 	jr nz,DIAGNOSTICS		;01fc	20 07 	  .
-	ld (0fd86h),hl		;01fe	22 86 fd 	" . .
+	ld (SAVDE),hl		;01fe	22 86 fd 	" . .
 	ex de,hl			;0201	eb 	.
-	jp l0126h		;0202	c3 26 01 	. & .
+	jp MNTR2
+
 DIAGNOSTICS:
 	cp 'G'          ; Generate Display Pattern
 	jr nz,DIAGNOSTICS_H
@@ -445,7 +448,7 @@ l0213h:
 	bit 7,d		;021f	cb 7a 	. z
 	jr z,l0236h		;0221	28 13 	( .
 	ld d,0cfh		;0223	16 cf 	. .
-	call sub_06cbh		;0225	cd cb 06 	. . .
+	call RDCMOS		;0225	cd cb 06 	. . .
 	ld a,088h		;0228	3e 88 	> .
 	out (DPIOB),a		;022a	d3 fa 	. .
 l022ch:
@@ -453,12 +456,12 @@ l022ch:
 	bit 6,a		;022e	cb 77 	. w
 	jr z,l022ch		;0230	28 fa 	( .
 	ei			;0232	fb 	.
-	jp l0620h		;0233	c3 20 06 	.   .
+	jp ABORT		;0233	c3 20 06 	.   .
 l0236h:
 	ld d,04fh		;0236	16 4f 	. O
 	call sub_06bbh		;0238	cd bb 06 	. . .
 	ei			;023b	fb 	.
-	call sub_061ch		;023c	cd 1c 06 	. . .
+	call ABTTST		;023c	cd 1c 06 	. . .
 	jr l0236h		;023f	18 f5 	. .
 
 DIAGNOSTICS_H:
@@ -522,7 +525,7 @@ l028dh:
 l029ah:
 	cp 'J'          ; Jump
 	jr nz,l02a3h		;029c	20 05 	  .
-	ld de,l0104h		;029e	11 04 01 	. . .
+	ld de,MNTR		;029e	11 04 01 	. . .
 	push de			;02a1	d5 	.
 	jp (hl)			;02a2	e9 	.
 l02a3h:
@@ -542,7 +545,7 @@ l02bch:
 	cp 'L'			; Loop tests
 	jr nz,l02c8h
 	ld a,0xff
-	ld (0fd80h),a		;02c2	32 80 fd 	2 . .
+	ld (FLGLOP),a		;02c2	32 80 fd 	2 . .
 	jp GOMON		;02c5	c3 2f 06 	. / .
 l02c8h:
 	cp 'M'			;	Memory Map Test
@@ -606,13 +609,13 @@ l0335h:
 	jp nz,l036eh		;0337	c2 6e 03 	. n .
 	ld e,00fh		;033a	1e 0f 	. .
 l033ch:
-	call sub_06cbh		;033c	cd cb 06 	. . .
+	call RDCMOS		;033c	cd cb 06 	. . .
 	ld l,c			;033f	69 	i
 	ld b,000h		;0340	06 00 	. .
 l0342h:
 	ld c,b			;0342	48 	H
 	call sub_06cfh		;0343	cd cf 06 	. . .
-	call sub_06cbh		;0346	cd cb 06 	. . .
+	call RDCMOS		;0346	cd cb 06 	. . .
 	ld h,c			;0349	61 	a
 	ld c,l			;034a	4d 	M
 	call sub_06cfh		;034b	cd cf 06 	. . .
@@ -695,7 +698,7 @@ l03bfh:
 	xor h			;03c0	ac 	.
 	xor e			;03c1	ab 	.
 	xor (hl)			;03c2	ae 	.
-	jr nz,l03d9h		;03c3	20 14 	  .
+	jr nz,MEMERR		;03c3	20 14 	  .
 l03c5h:
 	inc hl			;03c5	23 	#
 	ld a,h			;03c6	7c 	|
@@ -708,7 +711,7 @@ l03d2h:
 	inc e			;03d4	1c 	.
 	jr nz,l03a2h		;03d5	20 cb 	  .
 	jr l0417h		;03d7	18 3e 	. >
-l03d9h:
+MEMERR:
 	ex af,af'			;03d9	08 	.
 	ld c,020h		;03da	0e 20 	.
 	CALLIX COIX
@@ -803,7 +806,7 @@ l0483h:
 l0489h:
 	cp 'U'			; United Tests
 	jr nz,l04cbh		;048b	20 3e 	  >
-	ld a,(0fd80h)		;048d	3a 80 fd 	: . .
+	ld a,(FLGLOP)		;048d	3a 80 fd 	: . .
 	cp 080h		;0490	fe 80 	. .
 	jr nz,l0499h		;0492	20 05 	  .
 	ld hl,(0fd83h)		;0494	2a 83 fd 	* . .
@@ -836,7 +839,7 @@ l04bch:
 l04c0h:
 	ld (0fd7eh),hl		;04c0	22 7e fd 	" ~ .
 	ld a,0ffh		;04c3	3e ff 	> .
-	ld (0fd81h),a		;04c5	32 81 fd 	2 . .
+	ld (FLGCMD),a		;04c5	32 81 fd 	2 . .
 	jp l05f8h		;04c8	c3 f8 05 	. . .
 l04cbh:
 	cp 'V'				; Read Disk Sector
@@ -886,11 +889,11 @@ l051bh:
 	cp 'Y'			; I/O Port Receive Test
 	jr nz,l053fh		;051d	20 20
 l051fh:
-	call sub_07ach		;051f	cd ac 07 	. . .
+	call CIPI		;051f	cd ac 07 	. . .
 	cp 00dh		;0522	fe 0d 	. .
 	jr nz,l051fh		;0524	20 f9 	  .
 l0526h:
-	call sub_07ach		;0526	cd ac 07 	. . .
+	call CIPI		;0526	cd ac 07 	. . .
 	cp 00dh		;0529	fe 0d 	. .
 	jp z,l05f8h		;052b	ca f8 05 	. . .
 	and 00fh		;052e	e6 0f 	. .
@@ -899,7 +902,7 @@ l0526h:
 	rlca			;0532	07 	.
 	rlca			;0533	07 	.
 	ld d,a			;0534	57 	W
-	call sub_07ach		;0535	cd ac 07 	. . .
+	call CIPI		;0535	cd ac 07 	. . .
 	and 00fh		;0538	e6 0f 	. .
 	or d			;053a	b2 	.
 	ld (hl),a			;053b	77 	w
@@ -941,7 +944,7 @@ l056dh:
 	ld h,048h		;0577	26 48 	& H
 l0579h:
 	dec h			;0579	25 	%
-	call sub_061ch		;057a	cd 1c 06 	. . .
+	call ABTTST		;057a	cd 1c 06 	. . .
 	ld ix,ERROR
 	call FPWRIT
 	ld a,(0fd15h)		;0584	3a 15 fd 	: . .
@@ -952,7 +955,7 @@ l0579h:
 	jr nz,l0579h		;058e	20 e9 	  .
 l0590h:
 	push hl			;0590	e5 	.
-	call sub_061ch		;0591	cd 1c 06 	. . .
+	call ABTTST		;0591	cd 1c 06 	. . .
 	ld ix,ERROR
 	call FPREAD
 	ld a,(0fd15h)		;059b	3a 15 fd 	: . .
@@ -1005,14 +1008,14 @@ l05e8h:
 	set 6,l		;05f3	cb f5 	. .
 	jp z,l054dh		;05f5	ca 4d 05 	. M .
 l05f8h:
-	ld a,(0fd80h)		;05f8	3a 80 fd 	: . .
+	ld a,(FLGLOP)		;05f8	3a 80 fd 	: . .
 	or a			;05fb	b7 	.
 	jr z,l0612h		;05fc	28 14 	( .
 	cp 080h		;05fe	fe 80 	. .
 	jr z,l0612h		;0600	28 10 	( .
 	ld a,080h		;0602	3e 80 	> .
-	ld (0fd80h),a		;0604	32 80 fd 	2 . .
-	ld hl,0fd86h		;0607	21 86 fd 	! . .
+	ld (FLGLOP),a		;0604	32 80 fd 	2 . .
+	ld hl,SAVDE		;0607	21 86 fd 	! . .
 	ld de,0fd8bh		;060a	11 8b fd 	. . .
 	ld bc,00005h		;060d	01 05 00 	. . .
 	ldir		;0610	ed b0 	. .
@@ -1022,19 +1025,23 @@ l0615h:
 	ld c,'?'
 	call CO
 	jr GOMON
-sub_061ch:
-	call sub_079ah		;061c	cd 9a 07 	. . .
+
+;
+;	TEST FOR ABORT FROM CONSOLE
+;
+ABTTST:
+	call XXXKEYSTS
 	ret z			;061f	c8 	.
-l0620h:
-	ld ix,l0627h		;0620	dd 21 27 06 	. ! ' .
-	jp l076fh		;0624	c3 6f 07 	. o .
-l0627h:
-	ld a,000h		;0627	3e 00 	> .
-	ld (0fd80h),a		;0629	32 80 fd 	2 . .
-	ld (0fd81h),a		;062c	32 81 fd 	2 . .
+
+ABORT:
+	CALLIX l076fh
+	ld a,0
+	ld (FLGLOP),a		; No loop pending
+	ld (FLGCMD),a		; No macro command
+
 GOMON:
-	ld sp,STACK_BASE		;062f	31 00 fe 	1 . .
-	jp l0104h		;0632	c3 04 01 	. . .
+	ld sp,STACK_BASE
+	jp MNTR
 
 		; continuation of diagnostic input: unrecognized key
 l0635h:
@@ -1057,7 +1064,7 @@ l0646h:
 	ld l,a			;064e	6f 	o
 	inc b			;064f	04 	.
 	ld (0fd88h),hl		;0650	22 88 fd 	" . .
-	ld (0fd86h),de		;0653	ed 53 86 fd 	. S . .
+	ld (SAVDE),de		;0653	ed 53 86 fd 	. S . .
 	jp l012ah		;0657	c3 2a 01 	. * .
 sub_065ah:
 	ld c,009h		;065a	0e 09 	. .
@@ -1133,7 +1140,7 @@ _DISP:
 sub_06bbh:
 	ld b,004h		;06bb	06 04 	. .
 l06bdh:
-	call sub_06cbh		;06bd	cd cb 06 	. . .
+	call RDCMOS		;06bd	cd cb 06 	. . .
 	djnz l06bdh		;06c0	10 fb 	. .
 	ld a,c			;06c2	79 	y
 	cp 00fh		;06c3	fe 0f 	. .
@@ -1141,7 +1148,45 @@ l06bdh:
 	ret nz			;06c7	c0 	.
 	ld a,0c0h		;06c8	3e c0 	> .
 	ret			;06ca	c9 	.
-sub_06cbh:
+
+;
+;CMOS RAM OR CLOCK READ/WRITE
+;  D=ADDRESS 0-63
+;  D6,7=0 IF CMOS RAM
+;  D6=1 IF CLOCK
+;  D7=0 IF NATIONAL
+;  D7=1 IF OKIDATA
+;  C0-3=DATA TO BE WRITTEN
+;  C4-7=0
+;  ON EXIT C=DATA (IF READ)
+;LEAVES WITH INTERRUPT OFF
+;(A,C,D,E)
+;
+; Addresses:
+; 	System Initialization
+; 	50 Hz Flag
+; 	Time Initialization
+; 	Date Initialization
+; 	Bell Flag
+; 	Volume
+; 	Printer Baud
+; 	Communications Baud
+; 	Key Sound
+; 	Brightness High
+; 	Brightness Low
+; 	Year Low
+; 	Year High
+; 	Shift Lock Flag
+; 	Next Alarm - Month
+; 	Next Alarm - Day High
+; 	Next Alarm - Day Low
+; 	Next Alarm - Hour High
+; 	Next Alarm - Hour Low
+; 	Next Alarm - Minute High
+; 	Next Alarm - Minute Low
+; 	Next Alarm - Alarm Number
+; 	Alarm Type - Next execution mode
+RDCMOS:
 	ld e,00fh		;06cb	1e 0f 	. .
 	jr l06d1h		;06cd	18 02 	. .
 sub_06cfh:
@@ -1287,7 +1332,7 @@ l0790h:
 	in a,(SCOMM)		;0794	db f1 	. .
 	and 001h		;0796	e6 01 	. .
 	jp (iy)		;0798	fd e9 	. .
-sub_079ah:
+XXXKEYSTS:
 	pop ix		;079a	dd e1 	. .
 l079ch:
 	ld iy,l07a2h		;079c	fd 21 a2 07 	. ! . .
@@ -1298,10 +1343,17 @@ l07a2h:
 	jr l0790h		;07a8	18 e6 	. .
 l07aah:
 	jp (ix)		;07aa	dd e9 	. .
-sub_07ach:
+
+;	COMM/PRTR INPUT ROUTINE
+; 	 EITHER OR BOTH PORTS MAY BE SELECTED
+; 	 AS SPECIFIED BY THE S COMMAND.
+;	 FETCHES COMM. PORT 1ST.
+; 	 RETURNS '?' IF NEITHER SELECTED
+;
+CIPI:
 	ld a,(KEYFLG)		;07ac	3a 79 fd 	: y .
 	or a			;07af	b7 	.
-	jp nz,l0620h		;07b0	c2 20 06 	.   .
+	jp nz,ABORT		;07b0	c2 20 06 	.   .
 	ld a,(0fd85h)		;07b3	3a 85 fd 	: . .
 	and 011h		;07b6	e6 11 	. .
 	jp z,l0615h		;07b8	ca 15 06 	. . .
@@ -1314,12 +1366,12 @@ sub_07ach:
 l07c7h:
 	ld a,(0fd85h)		;07c7	3a 85 fd 	: . .
 	bit 4,a		;07ca	cb 67 	. g
-	jr z,sub_07ach		;07cc	28 de 	( .
+	jr z,CIPI		;07cc	28 de 	( .
 	ld a,010h		;07ce	3e 10 	> .
 	out (SPRTR),a		;07d0	d3 f3 	. .
 	in a,(SPRTR)		;07d2	db f3 	. .
 	and 001h		;07d4	e6 01 	. .
-	jr z,sub_07ach		;07d6	28 d4 	( .
+	jr z,CIPI		;07d6	28 d4 	( .
 	in a,(DPRTR)		;07d8	db f2 	. .
 	ret			;07da	c9 	.
 sub_07dbh:
@@ -1401,7 +1453,7 @@ _T1:
 	xor a			;0848	af 	.
 	ld (KEYFLG),a		;0849	32 79 fd 	2 y .
 	ei			;084c	fb 	.
-	jp l0104h		;084d	c3 04 01 	. . .
+	jp MNTR
 _T2:
 	ld a,010h		;0850	3e 10 	> .
 	out (SCOMM),a		;0852	d3 f1 	. .
@@ -1674,7 +1726,7 @@ l09d4h:
 	ld a,(0fd13h)		;09ef	3a 13 fd 	: . .
 	ld (0fd06h),a		;09f2	32 06 fd 	2 . .
 	pop hl			;09f5	e1 	.
-	call sub_061ch		;09f6	cd 1c 06 	. . .
+	call ABTTST		;09f6	cd 1c 06 	. . .
 	ld ix,ERROR
 	call DISKOP
 	pop hl			;0a00	e1 	.
@@ -2512,9 +2564,12 @@ HOMES: equ 0fd1fh		; Home flags (not sure what it means)
 MTRCNT: equ 0fd20h		; Floppy motor timer
 
 ; KEYBOARD VARIABLES
-KEYCOD: equ 0fd78h		; Key code
-KEYFLG: equ 0fd79h		; Key flag (FF = KEY WAITING)
-SHLOCK: equ 0fd7ah		; Shift lock
+KEYCOD: equ 0xfd78		; Key code
+KEYFLG: equ 0xfd79		; Key flag (FF = KEY WAITING)
+SHLOCK: equ 0xfd7a		; Shift lock
+FLGLOP: equ 0xfd80		; LOOP PENDING FLAG
+FLGCMD:	equ 0xfd81		; MACRO FLAG
+LSTATE: equ 0xfd82		; "L0-L7 State" (for floppy)
 
-; MISC. VARIABLES
-LSTATE: equ 0fd82h		;L0-L7 STATE
+SAVDE:  equ 0fd86h		; Loop DE save
+
