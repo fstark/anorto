@@ -6,7 +6,7 @@ while true; do
     inotifywait -qq -e close_write otrona_d.asm
     echo -n "Checking..."
     # z80asm otrona_d.asm -o otrona_d.bin
-    pasmo --alocal otrona_d.asm otrona_d.bin
+    pasmo --alocal otrona_d.asm otrona_d.bin otrona_d.sys
     echo "done"
 
     if [ -f otrona_d.bin ]; then
