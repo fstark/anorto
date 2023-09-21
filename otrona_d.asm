@@ -316,25 +316,26 @@ l012ah:
 l012ch:
 	or a			;012c	b7 	.
 	jr z,l0173h		;012d	28 44 	( D
-	call ABTTST		;012f	cd 1c 06 	. . .
-	ld a,(FLGCMD)		;0132	3a 81 fd 	: . .
-	or a			;0135	b7 	.
-	jr z,l0148h		;0136	28 10 	( .
-	push hl			;0138	e5 	.
-	ld hl,(0fd7eh)		;0139	2a 7e fd 	* ~ .
-	ld a,(hl)			;013c	7e 	~
-	inc hl			;013d	23 	#
-	ld (0fd7eh),hl		;013e	22 7e fd 	" ~ .
-	pop hl			;0141	e1 	.
-	or a			;0142	b7 	.
-	jr nz,l017eh		;0143	20 39 	  9
-	ld (FLGCMD),a		;0145	32 81 fd 	2 . .
+
+	call ABTTST			; Test for abort (?)
+	ld a,(FLGCMD)		; Test for macro
+	or a
+	jr z,l0148h			; No macro in progress
+	push hl				; Next command
+	ld hl,(CMDPTR)
+	ld a,(hl)
+	inc hl
+	ld (CMDPTR),hl
+	pop hl
+	or a				; 
+	jr nz,l017eh		; Execute command
+	ld (FLGCMD),a		; End of macro (a=0)
 l0148h:
 	ld a,(FLGLOP)		;0148	3a 80 fd 	: . .
 	cp 080h		;014b	fe 80 	. .
 	jr nz,l0161h		;014d	20 12 	  .
 	ld hl,0fd83h		;014f	21 83 fd 	! . .
-	ld (0fd7eh),hl		;0152	22 7e fd 	" ~ .
+	ld (CMDPTR),hl		;0152	22 7e fd 	" ~ .
 	ld hl,(0fd8dh)		;0155	2a 8d fd 	* . .
 	ld de,(0fd8bh)		;0158	ed 5b 8b fd 	. [ . .
 	ld a,(0fd8fh)		;015c	3a 8f fd 	: . .
@@ -351,58 +352,69 @@ l0173h:
 	jr z,l0161h		;017a	28 e5 	( .
 	in a,(DCOMM)		;017c	db f0 	. .
 l017eh:
-	bit 6,a		;017e	cb 77 	. w
-	jr z,l0184h		;0180	28 02 	( .
+	bit 6,a				; Uppercase
+	jr z,ECHO
 	res 5,a		;0182	cb af 	. .
-l0184h:
+ECHO:
 	ld c,a			;0184	4f 	O
 	CALLIX COIX
-	ld (0fd8ah),a		;018c	32 8a fd 	2 . .
+	ld (SAVCMD),a		;018c	32 8a fd 	2 . .
+
+;
+; Monitor commands
+;
+CBS:					; BS = Examine previous memory address
 	cp BS
-	jr nz,l019ch		;0191	20 09 	  .
-	ex de,hl			;0193	eb 	.
-	xor a			;0194	af 	.
-	or b			;0195	b0 	.
-	jr z,l0199h		;0196	28 01 	( .
-	ld (hl),e			;0198	73 	s
-l0199h:
-	dec hl			;0199	2b 	+
-	jr l01bah		;019a	18 1e 	. .
-l019ch:
-	cp CR
-	jr nz,l01aah		;019e	20 0a 	  .
-	xor a			;01a0	af 	.
-	or b			;01a1	b0 	.
-	jp z,GOMON		;01a2	ca 2f 06 	. / .
-	ex de,hl			;01a5	eb 	.
-	ld (hl),e			;01a6	73 	s
-	jp GOMON		;01a7	c3 2f 06 	. / .
-l01aah:
-	cp CTRLLF
+	jr nz,CCR
+	ex de,hl
+	xor a
+	or b				; b == data present & e = new data ? ####checkme!
+	jr z,_J1
+	ld (hl),e
+_J1:
+	dec hl				; Previous address
+	jr LFRET			; Ends like "LF"
+
+CCR:					; CR = Close and back to monitor
+	cp CR			
+	jr nz,CESC
+	xor a
+	or b				; Check if update needed
+	jp z,GOMON
+	ex de,hl
+	ld (hl),e			; Update and back
+	jp GOMON
+
+CESC:				; CTRL LINE FEED = Back to terminal
+	cp CTRLLF		
 	jp z,GOTERM
-	cp LF
-	jr nz,l01dbh		;01b1	20 28 	  (
-	ex de,hl			;01b3	eb 	.
-	xor a			;01b4	af 	.
-	or b			;01b5	b0 	.
-	jr z,l01b9h		;01b6	28 01 	( .
-	ld (hl),e			;01b8	73 	s
-l01b9h:
-	inc hl			;01b9	23 	#
-l01bah:
-	ld c,00dh		;01ba	0e 0d 	. .
+
+CLF:				; LF = Examine next memory address
+	cp LF		
+	jr nz,CSLASH
+	ex de,HL
+	xor a
+	or b
+	jr z,_J1
+	ld (hl),e		; Update memory if needed
+_J1:
+	inc hl			; Next address
+
+LFRET:
+	ld c,CR
 	CALLIX COIX
-	CALLIY DSH
-	ld a,h			;01ca	7c 	|
-	ld h,l			;01cb	65 	e
-	ld l,a			;01cc	6f 	o
-	CALLIY DSH
-	ld a,l			;01d4	7d 	}
-	ld l,h			;01d5	6c 	l
-	ld h,a			;01d6	67 	g
-	ld a,02fh		;01d7	3e 2f 	> /
-	jr l0184h		;01d9	18 a9 	. .
-l01dbh:
+	CALLIY DSH		; Display h
+	ld a,h
+	ld h,l
+	ld l,a
+	CALLIY DSH		; Display l
+	ld a,l
+	ld l,h
+	ld h,a
+	ld a,'/'
+	jr ECHO
+
+CSLASH:				; / = Open and display
 	cp 02fh		;01db	fe 2f 	. /
 	jr nz,l01fah		;01dd	20 1b 	  .
 	ld b,000h		;01df	06 00 	. .
@@ -814,7 +826,7 @@ l0489h:
 l0499h:
 	ld hl,0fd90h		;0499	21 90 fd 	! . .
 	push hl			;049c	e5 	.
-	ld (0fd7eh),hl		;049d	22 7e fd 	" ~ .
+	ld (CMDPTR),hl		;049d	22 7e fd 	" ~ .
 l04a0h:
 	ld (hl),000h		;04a0	36 00 	6 .
 	call sub_076dh		;04a2	cd 6d 07 	. m .
@@ -837,7 +849,7 @@ l04bch:
 	ex de,hl			;04bc	eb 	.
 	ld (0fd83h),hl		;04bd	22 83 fd 	" . .
 l04c0h:
-	ld (0fd7eh),hl		;04c0	22 7e fd 	" ~ .
+	ld (CMDPTR),hl		;04c0	22 7e fd 	" ~ .
 	ld a,0ffh		;04c3	3e ff 	> .
 	ld (FLGCMD),a		;04c5	32 81 fd 	2 . .
 	jp l05f8h		;04c8	c3 f8 05 	. . .
@@ -2567,9 +2579,9 @@ MTRCNT: equ 0fd20h		; Floppy motor timer
 KEYCOD: equ 0xfd78		; Key code
 KEYFLG: equ 0xfd79		; Key flag (FF = KEY WAITING)
 SHLOCK: equ 0xfd7a		; Shift lock
+CMDPTR: equ 0xfd7e		; Command pointer (for macros)
 FLGLOP: equ 0xfd80		; LOOP PENDING FLAG
 FLGCMD:	equ 0xfd81		; MACRO FLAG
 LSTATE: equ 0xfd82		; "L0-L7 State" (for floppy)
-
-SAVDE:  equ 0fd86h		; Loop DE save
-
+SAVDE:  equ 0xfd86		; Loop DE save
+SAVCMD: equ 0xfd8a		; Saved command (not used)
