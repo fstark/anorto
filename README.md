@@ -3,7 +3,8 @@ Reverse Engineering of Otrona Attache ROM (rev D)
 
 ## Relevant documents
 
-* [Nec µPD765 Datasheet](http://www.bitsavers.org/components/nec/_dataSheets/uPD765_Data_Sheet_Dec78.pdf)
+* Floppy: [Nec µPD765 Datasheet](http://www.bitsavers.org/components/nec/_dataSheets/uPD765_Data_Sheet_Dec78.pdf): See page 31 for instruction set
+* DMA: [Intel 8237 Datasheet](https://web.cecs.pdx.edu/~mpj/llp/references/Intel-8237-dma.pdf)
 * [Otrona Attache Technical Manual](http://www.bitsavers.org/pdf/otrona/Otrona_Attache_Technical_Manual_Jul83.pdf)
 
 

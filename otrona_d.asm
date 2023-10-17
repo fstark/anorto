@@ -104,6 +104,15 @@ DFLPY:	equ 0fdh	;FLOPPY DATA
 DDSPY:	equ 0feh	;DISPLAY DATA
 DMAP:	equ 0ffh	;RAM VIRTUAL MAP DATA
 
+; FLOPPY PARAMETERS
+
+HLT:	equ 8		;HEAD LOAD TIME
+HUT:	equ 0x0F	;HEAD UNLOAD TIME
+ND:	equ 0		;DMA MODE
+SRT:	equ 10		;STEP RATE = 12 MS
+MTRTIM:	equ 300		;5S MOTOR TIMEOUT FOR TESTING ONLY
+MTRDLY:	equ 45		;750MS. MOTOR START DELAY
+
 ; Additional information can be found in mame:
 ; https://github.com/mamedev/mame/blob/39b639d058275990289db08a159752d9c4f5d11f/src/mame/skeleton/attache.cpp
 
@@ -313,7 +322,6 @@ MNTR2:
 	ld b,h
 l012ah:
 	ld a,i		;012a	ed 57 	. W
-l012ch:
 	or a			;012c	b7 	.
 	jr z,l0173h		;012d	28 44 	( D
 
@@ -327,7 +335,7 @@ l012ch:
 	inc hl
 	ld (CMDPTR),hl
 	pop hl
-	or a				; 
+	or a				;
 	jr nz,l017eh		; Execute command
 	ld (FLGCMD),a		; End of macro (a=0)
 l0148h:
@@ -376,7 +384,7 @@ _J1:
 	jr LFRET			; Ends like "LF"
 
 CCR:					; CR = Close and back to monitor
-	cp CR			
+	cp CR
 	jr nz,CESC
 	xor a
 	or b				; Check if update needed
@@ -386,11 +394,11 @@ CCR:					; CR = Close and back to monitor
 	jp GOMON
 
 CESC:				; CTRL LINE FEED = Back to terminal
-	cp CTRLLF		
+	cp CTRLLF
 	jp z,GOTERM
 
 CLF:				; LF = Examine next memory address
-	cp LF		
+	cp LF
 	jr nz,CSLASH
 	ex de,HL
 	xor a
@@ -1480,65 +1488,113 @@ _T2:
 	out (DCOMM),a		;0861	d3 f0 	. .
 	jr _T0
 
+;DPIOB:	equ 0fah	; PIO PORT B DATA
+			; BO-1 = 5101 A4-5
+			; B2-4 = OPERATION SELECT
+			; 0= 8910 ADDR LOAD
+			; 1= 8910 DATA LOAD
+			; 2= 5832 WRITE
+			; 3= 5832 READ
+			; 4= 5101 WRITE
+			; 5 = 5101 READ
+			; 6 = LATCH LOAD
+			; 7 = NO-OP
+			; B5 = /1138 OPERATION STROBE
+			; B6 = /KEYBOARD DATA IN
+			; B7 = /KEYBOARD CLOCK OUT
+
+;
+;|------------------------------|
+;| 	DISK SUBROUTINES	|
+;|------------------------------|
+;
+;GENERAL FLOPPY HANDLER
+;(A,B,C,D,E,H,L)
+;READS A TABLE TO DO DISK OPERATIONS
+;  FIRST BYTE
+;	0-3 = # OF BYTES TO SEND TO 765
+;	4 = 1 IF DMA TO BE ACTIVATED
+;	5 = 1 IF INTERRUPT IS TO BE PROCESSED
+;	6 = 1 IF WRITE TO DISK, ELSE READ
+;	7 = 1 IF ST3 IS TO BE READ
+;  IF DMA IS NEEDED, THE NEXT TO BYTES ARE
+;    THE START LOCATION IN MEMORY
+;  NEXT BYTES ARE TRANSFERRED TO THE 765
+; IF ERROR, RETURN ADDRESS IN X REG.
+;  (USUALLY CONTAINS ADDRESS OF ERROR ROUTINE)
+;
+
 DISKOP:
-	push hl			;0865	e5 	.
-	ld hl,(MTRCNT)		;0866	2a 20 fd 	*   .
-	ld a,h			;0869	7c 	|
-	or l			;086a	b5 	.
-	push af			;086b	f5 	.
-	ld a,(LSTATE)		;086c	3a 82 fd 	: . .
-	set 0,a		;086f	cb c7 	. .
-	ld bc,0fbfah		;0871	01 fa fb 	. . .
-	push af			;0874	f5 	.
-	ld a,0cfh		;0875	3e cf 	> .
-	di			;0877	f3 	.
-	out (SPIOA),a		;0878	d3 f9 	. .
-	xor a			;087a	af 	.
-	out (SPIOA),a		;087b	d3 f9 	. .
-	pop af			;087d	f1 	.
-	out (DPIOA),a		;087e	d3 f8 	. .
-	out (c),b		;0880	ed 41 	. A
-	res 5,b		;0882	cb a8 	. .
-	out (c),b		;0884	ed 41 	. A
-	set 5,b		;0886	cb e8 	. .
-	out (c),b		;0888	ed 41 	. A
-	ei			;088a	fb 	.
-	ld hl,l012ch		;088b	21 2c 01 	! , .
-	ld (MTRCNT),hl		;088e	22 20 fd 	"   .
+	push hl
+	ld hl,(MTRCNT)		; Floppy motor timer, NZ == motor on
+	ld a,h
+	or l
+	push af
+	ld a,(LSTATE)
+	set 0,a			; Set 'motor on' bit
+	ld bc,0fbh*256+DPIOB
+	push af
+
+	ld a,0cfh
+	di
+	out (SPIOA),a		; PIO Port A: bit mode & every line as output
+	xor a
+	out (SPIOA),a		; PIO Port A: every line as output
+	pop af
+	out (DPIOA),a		; Motor on & graphics enable
+
+	; DPIOB: Latch load & operation stobe
+	out (c),b
+	res 5,b
+	out (c),b
+	set 5,b
+	out (c),b
+
+	ei
+
+	; Reset motor timer to 300ms
+	ld hl,MTRTIM
+	ld (MTRCNT),hl
+
 	pop af			;0891	f1 	.
-	jr nz,l08a0h		;0892	20 0c 	  .
+	jr nz,_DISKOP2		; Motor on?
 	scf			;0894	37 	7
-	ld de,00100h		;0895	11 00 01 	. . .
-l0898h:
-	ld hl,(MTRCNT)		;0898	2a 20 fd 	*   .
-	sbc hl,de		;089b	ed 52 	. R
-	jp p,l0898h		;089d	f2 98 08 	. . .
-l08a0h:
+	ld de,00100h
+_WAITSPEED:
+	; Wait for motor to be at speed
+	ld hl,(MTRCNT)
+	sbc hl,de
+	jp p,_WAITSPEED
+_DISKOP2:
 	pop hl			;08a0	e1 	.
 	ld d,h			;08a1	54 	T
 	ld e,l			;08a2	5d 	]
-	bit 4,(hl)		;08a3	cb 66 	. f
-	jr z,l08c6h		;08a5	28 1f 	( .
-	ld a,044h		;08a7	3e 44 	> D
-	bit 6,(hl)		;08a9	cb 76 	. v
-	jr z,l08afh		;08ab	28 02 	( .
-	ld a,048h		;08ad	3e 48 	> H
-l08afh:
+	bit 4,(hl)		; DMA bit set?
+	jr z,_DMA_DONE
+
+	; Configure DMA
+	ld a,044h		; Single mode, addr increment, no autoinit, Write, CH0
+	bit 6,(hl)		; Do we write to disk?
+	jr z,_DMASETUP
+	ld a,048h		; Single mode, addr increment, no autoinit, Read, CH0
+_DMASETUP:
 	out (DMAWMR),a		;08af	d3 eb 	. .
+
+	; Check second bit for addr in memory
 	push hl			;08b1	e5 	.
 	inc hl			;08b2	23 	#
 	ld c,0e0h		;08b3	0e e0 	. .
-	outi		;08b5	ed a3 	. .
-	outi		;08b7	ed a3 	. .
+	outi			;08b5	ed a3 	. .
+	outi			;08b7	ed a3 	. .
 	ld c,0e1h		;08b9	0e e1 	. .
-	outi		;08bb	ed a3 	. .
-	outi		;08bd	ed a3 	. .
+	outi			;08bb	ed a3 	. .
+	outi			;08bd	ed a3 	. .
 	ld a,000h		;08bf	3e 00 	> .
 	out (DMAWSM),a		;08c1	d3 ea 	. .
 	dec hl			;08c3	2b 	+
 	ex de,hl			;08c4	eb 	.
 	pop hl			;08c5	e1 	.
-l08c6h:
+_DMA_DONE:
 	push hl			;08c6	e5 	.
 	ld a,(hl)			;08c7	7e 	~
 	and 00fh		;08c8	e6 0f 	. .
@@ -1612,7 +1668,7 @@ l092ah:
 	jp GOMON		;092a	c3 2f 06 	. / .
 sub_092dh:
 	push hl			;092d	e5 	.
-	ld hl,l0f0ah		;092e	21 0a 0f 	! . .
+	ld hl,FPYTBL		;092e	21 0a 0f 	! . .
 	ld de,0fd00h		;0931	11 00 fd 	. . .
 	ld bc,0015h		;0934	01 15 00 	. . .
 	ldir		;0937	ed b0 	. .
@@ -1732,7 +1788,7 @@ l09d4h:
 	call sub_092dh		;09e2	cd 2d 09 	. - .
 	push hl			;09e5	e5 	.
 	ex de,hl			;09e6	eb 	.
-	ld hl,00f23h		;09e7	21 23 0f 	! # .
+	ld hl,FORMAT		;09e7	21 23 0f 	! # .
 	ld bc,0000bh		;09ea	01 0b 00 	. . .
 	ldir		;09ed	ed b0 	. .
 	ld a,(0fd13h)		;09ef	3a 13 fd 	: . .
@@ -1762,7 +1818,7 @@ BOOT:
 	ld c,000h		;0a1b	0e 00 	. .
 	call sub_0a80h		;0a1d	cd 80 0a 	. . .
 	call l0909h		;0a20	cd 09 09 	. . .
-	ld hl,l0f1fh		;0a23	21 1f 0f 	! . .
+	ld hl,SPECIFY		;0a23	21 1f 0f 	! . .
 	call DISKOP
 	ld a,003h		;0a29	3e 03 	> .
 l0a2bh:
@@ -1818,7 +1874,7 @@ l0a82h:
 	call SEND_FDC_CMD		;0a89	cd 8f 0a 	. . .
 	jp READ_FDC_REG		;0a8c	c3 a5 0a 	. . .
 
-SEND_FDC_CMD:
+SEND_FDC_CMD: ; = W765 in MONX.ASM
 	ld b,01fh
 l0a91h:
 	djnz l0a91h		; Wait ~100us
@@ -2295,7 +2351,7 @@ _floppytimer:
 	out (DPIOA),a
 
 	; DPIOB: Latch load & operation stobe
-	ld bc,0fbfah
+	ld bc,0fbh*256+DPIOB
 	out (c),b
 	res 5,b
 	out (c),b
@@ -2456,36 +2512,74 @@ KEYTBL: db 0x08, 0x09, 0x0A, 0x00, 0x00, 0x0D, 0x00, 0xFE	;BS TAB LF N/A N/A CR 
 	db 0x70, 0x71, 0x72, 0x73, 0x74, 0x75, 0x76, 0x77	;pqrstuvw
 	db 0x78, 0x79, 0x7a, 0x5b, 0x5c, 0x5d, 0x2d, 0x7F	;xyz[\]-    bell
 
-l0f0ah:
-	add hl,sp			;0f0a	39 	9
-	nop			;0f0b	00 	.
-	cp 0ffh		;0f0c	fe ff 	. .
-	ld bc,0046h		;0f0e	01 46 00 	. F .
-	nop			;0f11	00 	.
-	nop			;0f12	00 	.
-	ld bc,00a02h		;0f13	01 02 0a 	. . .
-	rrca			;0f16	0f 	.
-	rst 38h			;0f17	ff 	.
-	ld (00007h),hl		;0f18	22 07 00 	" . .
-	inc hl			;0f1b	23 	#
-	rrca			;0f1c	0f 	.
-l0f1dh:
-	nop			;0f1d	00 	.
-	dec b			;0f1e	05 	.
-l0f1fh:
-	inc bc			;0f1f	03 	.
-	inc bc			;0f20	03 	.
-	xor a			;0f21	af 	.
-	djnz 00f9ah		;0f22	10 76 	. v
-	nop			;0f24	00 	.
-	cp 027h		;0f25	fe 27 	. '
-	nop			;0f27	00 	.
-	ld c,l			;0f28	4d 	M
-	nop			;0f29	00 	.
-	ld (bc),a			;0f2a	02 	.
-	ld a,(bc)			;0f2b	0a 	.
-	ld e,0e5h		;0f2c	1e e5 	. . XXX
-	xor (hl)			;0f2e	ae 	.
+;GENERAL FLOPPY HANDLER
+;(A,B,C,D,E,H,L)
+;READS A TABLE TO DO DISK OPERATIONS
+;  FIRST BYTE
+;	0-3 = # OF BYTES TO SEND TO 765
+;	4 = 1 IF DMA TO BE ACTIVATED
+;	5 = 1 IF INTERRUPT IS TO BE PROCESSED
+;	6 = 1 IF WRITE TO DISK, ELSE READ
+;	7 = 1 IF ST3 IS TO BE READ
+;  IF DMA IS NEEDED, THE NEXT TO BYTES ARE
+;    THE START LOCATION IN MEMORY
+;  NEXT BYTES ARE TRANSFERRED TO THE 765
+; IF ERROR, RETURN ADDRESS IN X REG.
+;  (USUALLY CONTAINS ADDRESS OF ERROR ROUTINE)
+;
+
+FPYTBL:
+	db 0x39		; 9 bytes | DMA | INT
+	dw 0xfe00
+	dw 0x1ff
+	db DBL*40H+6	; Read data, DBL sets density flag (FM or MFM)
+	db 0		; Drive 0 / Head 0
+	db 0		; Cylinder 0
+	db 0		; Head 0
+	db 1		; Sector 0
+	db DBL+1	; Bytes per sector
+	db SECS+9	; EOT = Sector number per cylinder
+	db 37-(SECS*22)	; GPL = Gap between sectors
+	db 0xff		; DTL = Sector data length
+
+RECALIBRATE: ;0f18, unused?
+	db 0x22		; 2 bytes | DMA
+	dw 7
+	dw 0x0F23
+	db 0		; Invalid?
+	db 5
+
+SPECIFY:
+	db 3
+	db 3		; 765: Specify
+	db SRT*16+HUT	; Step Rate Time + Head Unload Time
+	db HLT*2+ND	; Head Load Time + Non DMA Mode
+
+FORMAT:
+	db 0x76		; 6 bytes | DMA | INT | Write
+	dw FILBUF	; DMA Address
+	dw 4*(9+SECS)-1
+	db 40H*DBL+0DH	; Format, DBL sets density flag (FM or MFM)
+	db 0		; Drive 0 / Head 0
+	db DBL+1	; Bytes per sector
+	db SECS+9	; Sectors per track (10)
+	db 87-(SECS*57)	; Gap between sectors
+	db 0xE5		; Filler data pattern
+
+;;
+;FMTTBL:	.BYTE	76H
+;	.WORD	FILBUF
+;	.WORD	4*(9+SECS)-1
+;	.BYTE	40H*DBL+0DH
+;	.BYTE	0	;HD & DRIVE
+;	.BYTE	DBL+1	;SECTOR SIZE
+;	.BYTE	SECS+9	;SECTORS/CYL
+;	.BYTE	87-(SECS*57) ;GAP 3
+;	.BYTE	0E5H	;FILL DATA
+
+
+; Baud rate table
+	xor (hl)		;0f2e	ae 	.
 	add a,b			;0f2f	80 	.
 	ld b,b			;0f30	40 	@
 	jr nz,$+18		;0f31	20 10 	  .
