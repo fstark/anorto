@@ -25,6 +25,11 @@ RCALLIY: macro adrs
 
 
 ;
+;|----------------------|
+;|	CONSTANTS	|
+;|----------------------|
+;
+;
 ;	SELECT DISK CONFIGURATION
 ;
 DBL:	equ	1	;DENSITY (0=SINGLE, 1=DOUBLE)
@@ -622,7 +627,7 @@ l0321h:
 l032bh:
 	cp 'P'			; Format Diskette
 	jr nz,l0335h		;032d	20 06 	  .
-	call sub_09b5h		;032f	cd b5 09 	. . .
+	call SELFMT		;032f	cd b5 09 	. . .
 	jp GOMON		;0332	c3 2f 06 	. / .
 l0335h:
 	cp 'Q'			; CMOS Memory Test
@@ -767,7 +772,7 @@ l0417h:
 	and 003h		;0423	e6 03 	. .
 	jr nz,l0432h		;0425	20 0b 	  .
 	ld hl,09d00h		;0427	21 00 9d 	! . .
-	ld de,0fd00h		;042a	11 00 fd 	. . .
+	ld de,TYPE		;042a	11 00 fd 	. . .
 	ld bc,00100h		;042d	01 00 01 	. . .
 	ldir		;0430	ed b0 	. .
 l0432h:
@@ -931,9 +936,9 @@ l0526h:
 l053fh:
 	cp 'Z'			; Disk Drive Test
 	jp nz,l0635h		;0541	c2 35 06 	. 5 .
-	call sub_09b5h		;0544	cd b5 09 	. . .
+	call SELFMT		;0544	cd b5 09 	. . .
 	xor a			;0547	af 	.
-	ld (0fd1dh),a		;0548	32 1d fd 	2 . .
+	ld (ERRCNT),a		;0548	32 1d fd 	2 . .
 	res 6,l		;054b	cb b5 	. .
 l054dh:
 	ld a,l			;054d	7d 	}
@@ -1630,7 +1635,7 @@ l08f2h:
 l08f4h:
 	ld hl,0a000h		;08f4	21 00 a0 	! . .
 l08f7h:
-	ld a,(0fd1eh)		;08f7	3a 1e fd 	: . .
+	ld a,(FPYFLG)		;08f7	3a 1e fd 	: . .
 	or a			;08fa	b7 	.
 	jr nz,l0909h		;08fb	20 0c 	  .
 	dec hl			;08fd	2b 	+
@@ -1644,7 +1649,7 @@ l08ffh:
 	jp (ix)		;0907	dd e9 	. .
 l0909h:
 	xor a			;0909	af 	.
-	ld (0fd1eh),a		;090a	32 1e fd 	2 . .
+	ld (FPYFLG),a		;090a	32 1e fd 	2 . .
 	ret			;090d	c9 	.
 
 ERROR:
@@ -1659,9 +1664,9 @@ sub_0913h:
 	push hl			;091b	e5 	.
 	call sub_0685h		;091c	cd 85 06 	. . .
 	pop hl			;091f	e1 	.
-	ld a,(0fd1dh)		;0920	3a 1d fd 	: . .
+	ld a,(ERRCNT)		;0920	3a 1d fd 	: . .
 	inc a			;0923	3c 	<
-	ld (0fd1dh),a		;0924	32 1d fd 	2 . .
+	ld (ERRCNT),a		;0924	32 1d fd 	2 . .
 	cp 017h		;0927	fe 17 	. .
 	ret m			;0929	f8 	.
 l092ah:
@@ -1684,8 +1689,8 @@ l0943h:
 	rlca			;0946	07 	.
 	rlca			;0947	07 	.
 	and 005h		;0948	e6 05 	. .
-	ld (0fd06h),a		;094a	32 06 fd 	2 . .
-	ld (0fd13h),a		;094d	32 13 fd 	2 . .
+	ld (RDRV),a		;094a	32 06 fd 	2 . .
+	ld (SDRV),a		;094d	32 13 fd 	2 . .
 	res 2,a		;0950	cb 97 	. .
 	ld (0fd10h),a		;0952	32 10 fd 	2 . .
 	ld a,(HOMES)		;0955	3a 1f fd 	: . .
@@ -1705,7 +1710,7 @@ l096ah:
 	ld hl,0fd0eh		;096e	21 0e fd 	! . .
 	push hl			;0971	e5 	.
 	call DISKOP
-	ld hl,0fd11h		;0975	21 11 fd 	! . .
+	ld hl,SEKTBL		;0975	21 11 fd 	! . .
 	call DISKOP
 	pop hl			;097b	e1 	.
 	call DISKOP
@@ -1715,11 +1720,11 @@ l0980h:
 	and 00fh		;0981	e6 0f 	. .
 	ld (0fd09h),a		;0983	32 09 fd 	2 . .
 	ld a,h			;0986	7c 	|
-	ld (0fd14h),a		;0987	32 14 fd 	2 . .
+	ld (NCN),a		;0987	32 14 fd 	2 . .
 	ld (0fd07h),a		;098a	32 07 fd 	2 . .
-	ld hl,0fd11h		;098d	21 11 fd 	! . .
+	ld hl,SEKTBL		;098d	21 11 fd 	! . .
 	call DISKOP
-	ld hl,0fd00h		;0993	21 00 fd 	! . .
+	ld hl,TYPE		;0993	21 00 fd 	! . .
 	ret			;0996	c9 	.
 
 ;READ A FLOPPY SECTOR, WHERE
@@ -1734,13 +1739,13 @@ FPREAD:
 
 ;WRITE A FLOPPY SECTOR, WHERE
 ;H=CYLINDER, L7=1 IF 96 TPI,
-;L6=HEAD, L4=DRIVE, L0-3=SECTOR (1-10)
+;L6=HEAD, L4=DRIVE, L0-3=SECTOR (1-10)f
 FPWRIT:
 	push hl
 	call sub_092dh		;09a1	cd 2d 09 	. - .
 	ld (hl),0x79
 	ld a,DBL*40H+5
-	ld (0fd05h),a		;09a8	32 05 fd 	2 . .
+	ld (CMMD),a		;09a8	32 05 fd 	2 . .
 	call DISKOP
 	pop hl
 DLY2MS:
@@ -1750,7 +1755,7 @@ DLY2MS:
 
 
 
-sub_09b5h:
+SELFMT:
 	xor a			;09b5	af 	.
 	bit 4,l		;09b6	cb 65 	. e
 	jr z,l09bch		;09b8	28 02 	( .
@@ -1791,8 +1796,8 @@ l09d4h:
 	ld hl,FORMAT		;09e7	21 23 0f 	! # .
 	ld bc,0000bh		;09ea	01 0b 00 	. . .
 	ldir		;09ed	ed b0 	. .
-	ld a,(0fd13h)		;09ef	3a 13 fd 	: . .
-	ld (0fd06h),a		;09f2	32 06 fd 	2 . .
+	ld a,(SDRV)		;09ef	3a 13 fd 	: . .
+	ld (RDRV),a		;09f2	32 06 fd 	2 . .
 	pop hl			;09f5	e1 	.
 	call ABTTST		;09f6	cd 1c 06 	. . .
 	ld ix,ERROR
@@ -2372,13 +2377,13 @@ IEND:
 	reti		;0d78	ed 4d 	. M
 
 ;	FLOPPY INTERRUPT ROUTINE
-INTF6:
+SRVFPY:
 	push hl			;0d7a	e5 	.
 	push de			;0d7b	d5 	.
 	push bc			;0d7c	c5 	.
 	push af			;0d7d	f5 	.
 	ld a,0ffh		;0d7e	3e ff 	> .
-	ld (0fd1eh),a		;0d80	32 1e fd 	2 . .
+	ld (FPYFLG),a		;0d80	32 1e fd 	2 . .
 	in a,(SFLPY)		;0d83	db fc 	. .
 	and 010h		;0d85	e6 10 	. .
 	jr z,l0d99h		;0d87	28 10 	( .
@@ -2645,34 +2650,65 @@ BEEP:
 	dw RESET
 	dw RESET
 	dw INTF4				; Interrupt F4
-	dw INTF6				; Interrupt F6
+	dw SRVFPY				; Interrupt F6
 	dw RESET
 	dw RESET
 	dw RESET
 	dw RESET
 
+;
+;|----------------------|
+;|	 RAM AREA	|
+;|----------------------|
+;
+;
+;	DISK VARIABLES
+;
+;	DISK COMMAND TABLES (LEAVE AS IS UP TO ERRCNT)
+;
+;	--- READ/WRITE/FORMAT ---
+;
+TYPE: equ 0xfd00	;COMMAND INFO
+			;  NNNNNNNN
+			;  ||||||||
+			;  ||||BYTES TO 765
+			;  |||0=NO, 1=YES FOR DMA
+			;  ||0=NO, 1=YES FOR INT
+			;  |0=RD, 1=WR TO DISK
+			;  0=NO, 1=YES TO READ ST3
+CMMD: equ 0xfd05	; Cursor position row, column
+RDRV: equ 0xfd06	; UNIT #
+
+SEKTBL: equ 0xfd11	; SEEK TYPE, SEEK COMMAND
+SDRV: equ 0xfd13	; SEEK DRIVE
+NCN: equ 0xfd14		;NEW CYLINDER NUMBER
+
 ; HIGH MEMORY VARIABLES
-CURSOR: equ 0xfd22		; Cursor position row, column
+CURSOR: equ 0xfd22	; Cursor position row, column
 CURSORROW: equ 0xfd22	; Cursor row
 CURSORCOL: equ 0xfd23	; Cursor column
 
-DSPCYC: equ 0xfd76		; DISPLAY CYCLE COUNTER
+DSPCYC: equ 0xfd76	; DISPLAY CYCLE COUNTER
 			;	0 = NORMAL CHAR
 			;	1 = ESC PENDING
 			;	2 = LINE # PNDG.
 			;	3 = CHAR # PNDG.
 			;	4 = ATTRIBUTE PNDG.
 			;	5 = CHARACTER SET PNDG.
- 		    ;	6 = LEAD-IN PENDING
+			;	6 = LEAD-IN PENDING
 
 ; OTHER FLOPPY VARIABLES
-HOMES: equ 0fd1fh		; Home flags (not sure what it means)
+ERRCNT: equ 0fd1dh		; Disk error counter
+FPYFLG: equ 0fd1eh		; Floppy flag (FF = INTERRUPT TAKEN)
+HOMES:  equ 0fd1fh		; Home flags (not sure what it means)
 MTRCNT: equ 0fd20h		; Floppy motor timer
 
 ; KEYBOARD VARIABLES
 KEYCOD: equ 0xfd78		; Key code
 KEYFLG: equ 0xfd79		; Key flag (FF = KEY WAITING)
 SHLOCK: equ 0xfd7a		; Shift lock
+
+; MISC. VARIABLES
 CMDPTR: equ 0xfd7e		; Command pointer (for macros)
 FLGLOP: equ 0xfd80		; LOOP PENDING FLAG
 FLGCMD:	equ 0xfd81		; MACRO FLAG
