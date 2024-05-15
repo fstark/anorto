@@ -347,11 +347,11 @@ l0148h:
 	ld a,(FLGLOP)		;0148	3a 80 fd 	: . .
 	cp 080h		;014b	fe 80 	. .
 	jr nz,l0161h		;014d	20 12 	  .
-	ld hl,0fd83h		;014f	21 83 fd 	! . .
+	ld hl,CMDSTT		;014f	21 83 fd 	! . .
 	ld (CMDPTR),hl		;0152	22 7e fd 	" ~ .
-	ld hl,(0fd8dh)		;0155	2a 8d fd 	* . .
-	ld de,(0fd8bh)		;0158	ed 5b 8b fd 	. [ . .
-	ld a,(0fd8fh)		;015c	3a 8f fd 	: . .
+	ld hl,(SAVHL2)		;0155	2a 8d fd 	* . .
+	ld de,(SAVDE2)		;0158	ed 5b 8b fd 	. [ . .
+	ld a,(SVCMD2)		;015c	3a 8f fd 	: . .
 	jr l017eh		;015f	18 1d 	. .
 l0161h:
 	CALLIY l081ah
@@ -786,7 +786,7 @@ l043bh:
 	cp 'S'			; Select Output Port
 	jr nz,l0469h		;043d	20 2a 	  *
 	ld a,l			;043f	7d 	}
-	ld (0fd85h),a		;0440	32 85 fd 	2 . .
+	ld (OUTSEL),a		;0440	32 85 fd 	2 . .
 	ld a,h			;0443	7c 	|
 	ld c,0f4h		;0444	0e f4 	. .
 	call sub_0456h		;0446	cd 56 04 	. V .
@@ -834,10 +834,10 @@ l0489h:
 	ld a,(FLGLOP)		;048d	3a 80 fd 	: . .
 	cp 080h		;0490	fe 80 	. .
 	jr nz,l0499h		;0492	20 05 	  .
-	ld hl,(0fd83h)		;0494	2a 83 fd 	* . .
+	ld hl,(CMDSTT)		;0494	2a 83 fd 	* . .
 	jr l04c0h		;0497	18 27 	. '
 l0499h:
-	ld hl,0fd90h		;0499	21 90 fd 	! . .
+	ld hl,CMDBUF		;0499	21 90 fd 	! . .
 	push hl			;049c	e5 	.
 	ld (CMDPTR),hl		;049d	22 7e fd 	" ~ .
 l04a0h:
@@ -860,7 +860,7 @@ l04b1h:
 	ld de,UNITSEQ		;04b9	11 57 0f 	. W .
 l04bch:
 	ex de,hl			;04bc	eb 	.
-	ld (0fd83h),hl		;04bd	22 83 fd 	" . .
+	ld (CMDSTT),hl		;04bd	22 83 fd 	" . .
 l04c0h:
 	ld (CMDPTR),hl		;04c0	22 7e fd 	" ~ .
 	ld a,0ffh		;04c3	3e ff 	> .
@@ -872,7 +872,7 @@ l04cbh:
 	ld ix,ERROR
 	call FPREAD
 l04d6h:
-	ld a,(0fd15h)		;04d6	3a 15 fd 	: . .
+	ld a,(ST0)		;04d6	3a 15 fd 	: . .
 	and 0c0h		;04d9	e6 c0 	. .
 	call nz,sub_0913h		;04db	c4 13 09 	. . .
 	jp l05f8h		;04de	c3 f8 05 	. . .
@@ -972,7 +972,7 @@ l0579h:
 	call ABTTST		;057a	cd 1c 06 	. . .
 	ld ix,ERROR
 	call FPWRIT
-	ld a,(0fd15h)		;0584	3a 15 fd 	: . .
+	ld a,(ST0)		;0584	3a 15 fd 	: . .
 	and 0c0h		;0587	e6 c0 	. .
 	call nz,sub_0913h		;0589	c4 13 09 	. . .
 	ld a,h			;058c	7c 	|
@@ -983,7 +983,7 @@ l0590h:
 	call ABTTST		;0591	cd 1c 06 	. . .
 	ld ix,ERROR
 	call FPREAD
-	ld a,(0fd15h)		;059b	3a 15 fd 	: . .
+	ld a,(ST0)		;059b	3a 15 fd 	: . .
 	and 0c0h		;059e	e6 c0 	. .
 	call nz,sub_0913h		;05a0	c4 13 09 	. . .
 	ld hl,STACK_BASE		;05a3	21 00 fe 	! . .
@@ -1000,10 +1000,10 @@ l05a9h:
 	jr l05cah		;05b9	18 0f 	. .
 l05bbh:
 	pop hl			;05bb	e1 	.
-	ld a,(0fd15h)		;05bc	3a 15 fd 	: . .
+	ld a,(ST0)		;05bc	3a 15 fd 	: . .
 	and 0c0h		;05bf	e6 c0 	. .
-	ld (0fd15h),a		;05c1	32 15 fd 	2 . .
-	ld (0fd16h),a		;05c4	32 16 fd 	2 . .
+	ld (ST0),a		;05c1	32 15 fd 	2 . .
+	ld (ST1),a		;05c4	32 16 fd 	2 . .
 	call z,sub_0913h		;05c7	cc 13 09 	. . .
 l05cah:
 	inc h			;05ca	24 	$
@@ -1041,7 +1041,7 @@ l05f8h:
 	ld a,080h		;0602	3e 80 	> .
 	ld (FLGLOP),a		;0604	32 80 fd 	2 . .
 	ld hl,SAVDE		;0607	21 86 fd 	! . .
-	ld de,0fd8bh		;060a	11 8b fd 	. . .
+	ld de,SAVDE2		;060a	11 8b fd 	. . .
 	ld bc,00005h		;060d	01 05 00 	. . .
 	ldir		;0610	ed b0 	. .
 l0612h:
@@ -1088,7 +1088,7 @@ l0646h:
 	or l			;064d	b5 	.
 	ld l,a			;064e	6f 	o
 	inc b			;064f	04 	.
-	ld (0fd88h),hl		;0650	22 88 fd 	" . .
+	ld (SAVHL),hl		;0650	22 88 fd 	" . .
 	ld (SAVDE),de		;0653	ed 53 86 fd 	. S . .
 	jp l012ah		;0657	c3 2a 01 	. * .
 sub_065ah:
@@ -1379,7 +1379,7 @@ CIPI:
 	ld a,(KEYFLG)		;07ac	3a 79 fd 	: y .
 	or a			;07af	b7 	.
 	jp nz,ABORT		;07b0	c2 20 06 	.   .
-	ld a,(0fd85h)		;07b3	3a 85 fd 	: . .
+	ld a,(OUTSEL)		;07b3	3a 85 fd 	: . .
 	and 011h		;07b6	e6 11 	. .
 	jp z,l0615h		;07b8	ca 15 06 	. . .
 	bit 0,a		;07bb	cb 47 	. G
@@ -1389,7 +1389,7 @@ CIPI:
 	in a,(DCOMM)		;07c4	db f0 	. .
 	ret			;07c6	c9 	.
 l07c7h:
-	ld a,(0fd85h)		;07c7	3a 85 fd 	: . .
+	ld a,(OUTSEL)		;07c7	3a 85 fd 	: . .
 	bit 4,a		;07ca	cb 67 	. g
 	jr z,CIPI		;07cc	28 de 	( .
 	ld a,010h		;07ce	3e 10 	> .
@@ -1413,7 +1413,7 @@ COIX:
 	jr z,l07f2h		;07e6	28 0a 	( .
 	call DISPLY
 l07ebh:
-	ld a,(0fd85h)		;07eb	3a 85 fd 	: . .
+	ld a,(OUTSEL)		;07eb	3a 85 fd 	: . .
 	bit 4,a		;07ee	cb 67 	. g
 	jr z,l0801h		;07f0	28 0f 	( .
 l07f2h:
@@ -1426,7 +1426,7 @@ l07f2h:
 	ld a,c			;07fe	79 	y
 	out (DPRTR),a		;07ff	d3 f2 	. .
 l0801h:
-	ld a,(0fd85h)		;0801	3a 85 fd 	: . .
+	ld a,(OUTSEL)		;0801	3a 85 fd 	: . .
 	bit 0,a		;0804	cb 47 	. G
 	jr z,l0817h		;0806	28 0f 	( .
 l0808h:
@@ -1625,7 +1625,7 @@ l08dch:
 	bit 7,(hl)		;08e3	cb 7e 	. ~
 	ret z			;08e5	c8 	.
 	call READ_FDC_REG		;08e6	cd a5 0a 	. . .
-	ld (0fd1ch),a		;08e9	32 1c fd 	2 . .
+	ld (ST3),a		;08e9	32 1c fd 	2 . .
 	ld a,002h		;08ec	3e 02 	> .
 	ret nz			;08ee	c0 	.
 	pop bc			;08ef	c1 	.
@@ -1657,9 +1657,9 @@ ERROR:
 	jr l092ah		;0911	18 17 	. .
 
 sub_0913h:
-	ld a,(0fd15h)		;0913	3a 15 fd 	: . .
+	ld a,(ST0)		;0913	3a 15 fd 	: . .
 	ld d,a			;0916	57 	W
-	ld a,(0fd16h)		;0917	3a 16 fd 	: . .
+	ld a,(ST1)		;0917	3a 16 fd 	: . .
 	ld e,a			;091a	5f 	_
 	push hl			;091b	e5 	.
 	call sub_0685h		;091c	cd 85 06 	. . .
@@ -1681,7 +1681,7 @@ sub_092dh:
 	bit 6,l		;093a	cb 75 	. u
 	jr z,l0943h		;093c	28 05 	( .
 	ld a,001h		;093e	3e 01 	> .
-	ld (0fd08h),a		;0940	32 08 fd 	2 . .
+	ld (RHD),a		;0940	32 08 fd 	2 . .
 l0943h:
 	ld a,l			;0943	7d 	}
 	rlca			;0944	07 	.
@@ -1692,7 +1692,7 @@ l0943h:
 	ld (RDRV),a		;094a	32 06 fd 	2 . .
 	ld (SDRV),a		;094d	32 13 fd 	2 . .
 	res 2,a		;0950	cb 97 	. .
-	ld (0fd10h),a		;0952	32 10 fd 	2 . .
+	ld (HDRV),a		;0952	32 10 fd 	2 . .
 	ld a,(HOMES)		;0955	3a 1f fd 	: . .
 	bit 4,l		;0958	cb 65 	. e
 	jr nz,l0964h		;095a	20 08 	  .
@@ -1707,7 +1707,7 @@ l0964h:
 l096ah:
 	ld (HOMES),a		;096a	32 1f fd 	2 . .
 	push hl			;096d	e5 	.
-	ld hl,0fd0eh		;096e	21 0e fd 	! . .
+	ld hl,RCLTBL		;096e	21 0e fd 	! . .
 	push hl			;0971	e5 	.
 	call DISKOP
 	ld hl,SEKTBL		;0975	21 11 fd 	! . .
@@ -1718,10 +1718,10 @@ l096ah:
 l0980h:
 	ld a,l			;0980	7d 	}
 	and 00fh		;0981	e6 0f 	. .
-	ld (0fd09h),a		;0983	32 09 fd 	2 . .
+	ld (RCRD),a		;0983	32 09 fd 	2 . .
 	ld a,h			;0986	7c 	|
 	ld (NCN),a		;0987	32 14 fd 	2 . .
-	ld (0fd07h),a		;098a	32 07 fd 	2 . .
+	ld (RDCYL),a		;098a	32 07 fd 	2 . .
 	ld hl,SEKTBL		;098d	21 11 fd 	! . .
 	call DISKOP
 	ld hl,TYPE		;0993	21 00 fd 	! . .
@@ -1827,14 +1827,14 @@ BOOT:
 	call DISKOP
 	ld a,003h		;0a29	3e 03 	> .
 l0a2bh:
-	ld (0fd7ch),sp		;0a2b	ed 73 7c fd 	. s | .
+	ld (BOTSTK),sp		;0a2b	ed 73 7c fd 	. s | .
 l0a2fh:
-	ld (0fd7bh),a		;0a2f	32 7b fd 	2 { .
+	ld (BOOTRY),a		;0a2f	32 7b fd 	2 { .
 	ld ix,l0a56h		;0a32	dd 21 56 0a 	. ! V .
 	ld hl,1		;0a36	21 01 00 	! . .
 	call FPREAD
 	ld hl,NOSYS_MSG		;0a3c	21 84 0f 	! . .
-	ld a,(0fd15h)		;0a3f	3a 15 fd 	: . .
+	ld a,(ST0)		;0a3f	3a 15 fd 	: . .
 	and 0c0h		;0a42	e6 c0 	. .
 	jr nz,l0a56h		;0a44	20 10 	  .
 	ld a,(0fe03h)		;0a46	3a 03 fe 	: . .
@@ -1842,7 +1842,7 @@ l0a2fh:
 
 		;	Jumps to loaded code
 	jp z,STACK_BASE		;0a4b	ca 00 fe 	. . .
-	ld a,(0fd7bh)		;0a4e	3a 7b fd 	: { .
+	ld a,(BOOTRY)		;0a4e	3a 7b fd 	: { .
 	dec a			;0a51	3d 	=
 	jr nz,l0a2fh		;0a52	20 db 	  .
 	jr l0a6bh		;0a54	18 15 	. .
@@ -1850,8 +1850,8 @@ l0a56h:
 	ld c,008h		;0a56	0e 08 	. .
 	call sub_0a80h		;0a58	cd 80 0a 	. . .
 	call READ_FDC_REG		;0a5b	cd a5 0a 	. . .
-	ld sp,(0fd7ch)		;0a5e	ed 7b 7c fd 	. { | .
-	ld a,(0fd7bh)		;0a62	3a 7b fd 	: { .
+	ld sp,(BOTSTK)		;0a5e	ed 7b 7c fd 	. { | .
+	ld a,(BOOTRY)		;0a62	3a 7b fd 	: { .
 	dec a			;0a65	3d 	=
 	jr nz,l0a2bh		;0a66	20 c3 	  .
 	ld hl,NODISK_MSG	;0a68	21 66 0f 	! f .
@@ -1929,7 +1929,7 @@ DISPLY:
 	push af
 l0abeh:
 	ld hl,(CURSOR)		;0abe	2a 22 fd 	* " .
-	ld a,(0fd77h)		;0ac1	3a 77 fd 	: w .
+	ld a,(LINOFS)		;0ac1	3a 77 fd 	: w .
 	add a,l			;0ac4	85 	.
 	cp 018h		;0ac5	fe 18 	. .
 	jr c,l0acbh		;0ac7	38 02 	8 .
@@ -1952,7 +1952,7 @@ l0acbh:
 	push af			;0ae3	f5 	.
 	ld de,00f37h		;0ae4	11 37 0f 	. 7 .
 	ex de,hl			;0ae7	eb 	.
-	ld a,(0fd25h)		;0ae8	3a 25 fd 	: % .
+	ld a,(CURCHR)		;0ae8	3a 25 fd 	: % .
 	ld c,a			;0aeb	4f 	O
 	ld b,000h		;0aec	06 00 	. .
 	add hl,bc			;0aee	09 	.
@@ -1972,7 +1972,7 @@ l0af3h:
 	out (SDSPY),a		;0b00	d3 ee 	. .
 	and 01fh		;0b02	e6 1f 	. .
 	ld l,a			;0b04	6f 	o
-	ld a,(0fd24h)		;0b05	3a 24 fd 	: $ .
+	ld a,(CURATT)		;0b05	3a 24 fd 	: $ .
 	out (c),a		;0b08	ed 79 	. y
 	ld a,h			;0b0a	7c 	|
 	cp 04fh		;0b0b	fe 4f 	. O
@@ -2052,13 +2052,13 @@ l0b6dh:
 	ld a,0abh		;0b6d	3e ab 	> .
 	out (SDSPY),a		;0b6f	d3 ee 	. .
 	out (DDSPY),a		;0b71	d3 fe 	. .
-	ld a,(0fd77h)		;0b73	3a 77 fd 	: w .
+	ld a,(LINOFS)		;0b73	3a 77 fd 	: w .
 	inc a
 	cp 24
 	jr nz,l0b7ch		;0b79	20 01 	  .
 	xor a			;0b7b	af 	.
 l0b7ch:
-	ld (0fd77h),a		;0b7c	32 77 fd 	2 w .
+	ld (LINOFS),a		;0b7c	32 77 fd 	2 w .
 	ld a,l			;0b7f	7d 	}
 	inc a			;0b80	3c 	<
 	inc l			;0b81	2c 	,
@@ -2268,7 +2268,7 @@ l0ca9h:
 sub_0cd7h:
 	ld c,SDSPY
 	out (c),d		;0cd9	ed 51 	. Q
-	ld hl,0fd26h		;0cdb	21 26 fd 	! & .
+	ld hl,DSPBUF		;0cdb	21 26 fd 	! & .
 	push hl			;0cde	e5 	.
 	push bc			;0cdf	c5 	.
 	ld c,DDSPY
@@ -2387,7 +2387,7 @@ SRVFPY:
 	in a,(SFLPY)		;0d83	db fc 	. .
 	and 010h		;0d85	e6 10 	. .
 	jr z,l0d99h		;0d87	28 10 	( .
-	ld hl,0fd15h		;0d89	21 15 fd 	! . .
+	ld hl,ST0		;0d89	21 15 fd 	! . .
 	ld b,007h		;0d8c	06 07 	. .
 l0d8eh:
 	push bc			;0d8e	c5 	.
@@ -2407,9 +2407,9 @@ l0d99h:
 	bit 6,a		;0da7	cb 77 	. w
 	jr z,IEND		;0da9	28 c8 	( .
 l0dabh:
-	ld (0fd15h),a		;0dab	32 15 fd 	2 . .
+	ld (ST0),a		;0dab	32 15 fd 	2 . .
 	call READ_FDC_REG	;0dae	cd a5 0a 	. . .
-	ld (0fd18h),a		;0db1	32 18 fd 	2 . .
+	ld (CYL),a		;0db1	32 18 fd 	2 . .
 	jr IEND		;0db4	18 bd 	. .
 
 IOINITDATA:
@@ -2679,15 +2679,58 @@ TYPE: equ 0xfd00	;COMMAND INFO
 CMMD: equ 0xfd05	; Cursor position row, column
 RDRV: equ 0xfd06	; UNIT #
 
+;DMAADR:	.BLKW	1	;ADDRESS TO START DATA XFER
+;BCNT:	.BLKW	1	;BYTE COUNT-1
+;CMMD:	.BLKB	1	;COMMAND TO 765
+;RDRV:	.BLKB	1	;UNIT #
+RDCYL: equ 0xfd07	; CYLINDER #
+RHD: equ 0xfd08		;HEAD #
+RCRD: equ 0xfd09	;RECORD #
+;NSENT:	.BLKB	1	;BYTES/SECTOR
+;EOT:	.BLKB	1	;SECTORS/TRACK
+;GPL:	.BLKB	1	;GAP 2 LENGTH
+;DTL:	.BLKB	1	;DATA LENGTH
+
+;
+;	--- RECALIBRATE	---
+;
+RCLTBL: equ 0xfd0e	; RECAL TYPE, RECAL COMMAND
+HDRV: equ 0xfd10	; RECAL DRIVE
+
+;
+;	--- SEEK ---
+;
 SEKTBL: equ 0xfd11	; SEEK TYPE, SEEK COMMAND
 SDRV: equ 0xfd13	; SEEK DRIVE
 NCN: equ 0xfd14		;NEW CYLINDER NUMBER
+
+;
+;	READ BACK STATUS - MUST STAY IN ORDER
+;
+ST0:  equ 0xfd15	; STO STATUS
+ST1:  equ 0xfd16	; ST1 STATUS
+ST2:  equ 0xfd17	; ST2 STATUS
+CYL:  equ 0xfd18	; CYLINDER STATUS
+HD:   equ 0xfd19	; HEAD STATUS
+REC:  equ 0xfd1a	; RECORD STATUS
+NUMB: equ 0xfd1b	; NUMBER OF BYTES STATUS
+ST3:  equ 0xfd1c	; DRIVE STATUS
+
+;
+;	OTHER FLOPPY VARIABLES
+;
+ERRCNT: equ 0xfd1d	; Disk error counter
+FPYFLG: equ 0xfd1e	; Floppy flag (FF = INTERRUPT TAKEN)
+HOMES:  equ 0xfd1f	; Home flags (not sure what it means)
+MTRCNT: equ 0xfd20	; Floppy motor timer
 
 ; HIGH MEMORY VARIABLES
 CURSOR: equ 0xfd22	; Cursor position row, column
 CURSORROW: equ 0xfd22	; Cursor row
 CURSORCOL: equ 0xfd23	; Cursor column
-
+CURATT:	equ 0xfd24	;CURRENT ATTRIBUTE CODE
+CURCHR:	equ 0xfd25	;CURRENT CHARACTER SET
+DSPBUF:	equ 0xfd26	;BUFFER FOR MOVING LINES
 DSPCYC: equ 0xfd76	; DISPLAY CYCLE COUNTER
 			;	0 = NORMAL CHAR
 			;	1 = ESC PENDING
@@ -2696,22 +2739,31 @@ DSPCYC: equ 0xfd76	; DISPLAY CYCLE COUNTER
 			;	4 = ATTRIBUTE PNDG.
 			;	5 = CHARACTER SET PNDG.
 			;	6 = LEAD-IN PENDING
+LINOFS:	equ 0xfd77	;OFFSET DUE TO LINE FEEDS
 
-; OTHER FLOPPY VARIABLES
-ERRCNT: equ 0fd1dh		; Disk error counter
-FPYFLG: equ 0fd1eh		; Floppy flag (FF = INTERRUPT TAKEN)
-HOMES:  equ 0fd1fh		; Home flags (not sure what it means)
-MTRCNT: equ 0fd20h		; Floppy motor timer
-
-; KEYBOARD VARIABLES
+;
+;	KEYBOARD VARIABLES
+;
 KEYCOD: equ 0xfd78		; Key code
 KEYFLG: equ 0xfd79		; Key flag (FF = KEY WAITING)
 SHLOCK: equ 0xfd7a		; Shift lock
 
-; MISC. VARIABLES
-CMDPTR: equ 0xfd7e		; Command pointer (for macros)
-FLGLOP: equ 0xfd80		; LOOP PENDING FLAG
-FLGCMD:	equ 0xfd81		; MACRO FLAG
-LSTATE: equ 0xfd82		; "L0-L7 State" (for floppy)
-SAVDE:  equ 0xfd86		; Loop DE save
-SAVCMD: equ 0xfd8a		; Saved command (not used)
+;
+;	MISC. VARIABLES
+;
+; FLAG86:	equ 0xfd00	; 8086 FLAG; 0 = O.K.
+BOOTRY:	equ 0xfd7b	; BOOT TRY COUNTER
+BOTSTK:	equ 0xfd7c	; BOOT STACK STORAGE
+CMDPTR: equ 0xfd7e	; Command pointer (for macros)
+FLGLOP: equ 0xfd80	; LOOP PENDING FLAG
+FLGCMD:	equ 0xfd81	; MACRO FLAG
+LSTATE: equ 0xfd82	; "L0-L7 State" (for floppy)
+CMDSTT:	equ 0xfd83	;START OF MACPTR
+OUTSEL:	equ 0xfd85	;OUTPUT SELECT STATUS
+SAVDE:  equ 0xfd86	; Loop DE save
+SAVHL:	equ 0xfd88	;LOOP HL SAVE
+SAVCMD: equ 0xfd8a	; Saved command (not used)
+SAVDE2:	equ 0xfd8b
+SAVHL2:	equ 0xfd8d
+SVCMD2:	equ 0xfd8f
+CMDBUF:	equ 0xfd90	;U COMMAND BUFFER
